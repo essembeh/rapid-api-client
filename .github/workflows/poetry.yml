@@ -1,0 +1,40 @@
+name: Build & Tests
+
+on: [push]
+
+jobs:
+  test:
+    name: Build and test App
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install poetry
+        run: pip install poetry
+      - name: Build app
+        run: poetry build
+      - name: Test app
+        run: |
+          poetry install
+          poetry run -- pytest --cov=rapid_api_client tests/
+          poetry run -- coverage report
+          poetry run -- coverage xml
+
+  publish:
+    name: Publish App on PyPI
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install poetry
+        run: pip install poetry
+      - name: Publish app
+        env:
+          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+        run: poetry publish --build --username "__token__" --password "$PYPI_TOKEN"
