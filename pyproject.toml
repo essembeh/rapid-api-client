@@ -43,6 +43,7 @@ pytest = "^8.3.3"
 pytest-asyncio = "^0.24.0"
 pytest-cov = "^5.0.0"
 pytest-dotenv = {extras = ["cli"], version = "^0.5.2"}
+pydantic-xml = "^2.13.0"
 
 [build-system]
 requires = ["poetry-core"]

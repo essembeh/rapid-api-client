@@ -176,3 +176,22 @@ class MyApi(RapidApi)
     async def model(self, report: Annotated[bytes, FileBody()], image: Annotated[bytes, FileBody()]): ...
 
  ```
+
+ ## Xml Support
+
+ Xml is also supported is you use [Pydantic-Xml](https://pydantic-xml.readthedocs.io/), either for responses with `response_class` or for POST/PUT content with `PydanticXmlBody`.
+
+ ```python
+class ResponseXmlRootModel(BaseXmlModel): ...
+
+class MyApi(RapidApi)
+
+    # parse response xml content
+    @get("/get", response_class=ResponseXmlRootModel)
+    async def get_xml(self): ...
+
+    # serialize xml model automatically
+    @post("/post")
+    async def post_xml(self, body: Annotated[ResponseXmlRootModel, PydanticXmlBody()]): ...
+
+ ```

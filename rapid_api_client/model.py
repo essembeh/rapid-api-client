@@ -4,6 +4,11 @@ from typing import Any
 from httpx import AsyncClient
 from pydantic import BaseModel
 
+try:
+    import pydantic_xml
+except ImportError:  # pragma: nocover
+    pydantic_xml = None  # type: ignore
+
 
 @dataclass
 class RapidApi:
@@ -46,3 +51,13 @@ class PydanticBody(Body):
     def serialize(self, body: Any) -> str | bytes:
         assert isinstance(body, BaseModel)
         return body.model_dump_json(indent=2 if self.prettyprint else None)
+
+
+@dataclass
+class PydanticXmlBody(Body):
+    def serialize(self, body: Any) -> str | bytes:
+        assert (
+            pydantic_xml is not None
+        ), "pydantic-xml must be installed to use PydanticXmlBody"
+        assert isinstance(body, pydantic_xml.BaseXmlModel)
+        return body.to_xml()

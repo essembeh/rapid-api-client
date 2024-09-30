@@ -6,7 +6,7 @@ from typing import Any, Awaitable, Callable, Dict, Mapping, Self, Tuple, Type, T
 from httpx import AsyncClient, Request, Response
 from pydantic import BaseModel
 
-from .model import Body, FileBody, Header, Path, Query, RapidApi
+from .model import Body, FileBody, Header, Path, Query, RapidApi, pydantic_xml
 from .utils import filter_none_values, find_annotation
 
 RESP = TypeVar("RESP", bound=BaseModel | Response)
@@ -93,6 +93,11 @@ def http(
                 client, sig, custom_parameters, method, path, args, kwargs
             )
             response = await client.send(request)
+            if pydantic_xml is not None and issubclass(
+                response_class, pydantic_xml.BaseXmlModel
+            ):
+                response.raise_for_status()
+                return response_class.from_xml(response.content)
             if issubclass(response_class, BaseModel):
                 response.raise_for_status()
                 return response_class.model_validate_json(response.content)
