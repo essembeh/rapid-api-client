@@ -195,3 +195,7 @@ class MyApi(RapidApi)
     async def post_xml(self, body: Annotated[ResponseXmlRootModel, PydanticXmlBody()]): ...
 
  ```
+
+ # Examples
+
+ See [example directory](./examples/) for some examples
