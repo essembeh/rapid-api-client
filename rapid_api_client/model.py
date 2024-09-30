@@ -1,13 +1,13 @@
 from dataclasses import dataclass, field
 from typing import Any
 
-from httpx import Client
+from httpx import AsyncClient
 from pydantic import BaseModel
 
 
 @dataclass
 class RapidApi:
-    client: Client = field(default_factory=Client)
+    client: AsyncClient = field(default_factory=AsyncClient)
 
 
 class CustomParameter: ...

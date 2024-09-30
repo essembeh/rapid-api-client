@@ -1,44 +1,56 @@
+from pytest import mark
+
 from rapid_api_client import RapidApi, delete, get, patch, post, put
 from tests.conftest import Infos
 
 
 class HttpBinApi(RapidApi):
     @get("/anything", response_class=Infos)
-    def get(self): ...
+    async def get(self): ...
 
     @post("/anything", response_class=Infos)
-    def post(self): ...
+    async def post(self): ...
 
     @delete("/anything", response_class=Infos)
-    def delete(self): ...
+    async def delete(self): ...
 
     @put("/anything", response_class=Infos)
-    def put(self): ...
+    async def put(self): ...
 
     @patch("/anything", response_class=Infos)
-    def patch(self): ...
+    async def patch(self): ...
 
 
-def test_http_get(client):
-    infos = HttpBinApi(client).get()
+@mark.asyncio
+async def test_http_get(client):
+    api = HttpBinApi(client)
+    infos = await api.get()
     assert infos.method == "GET"
 
 
-def test_http_post(client):
-    infos = HttpBinApi(client).post()
+@mark.asyncio
+async def test_http_post(client):
+    api = HttpBinApi(client)
+    infos = await api.post()
     assert infos.method == "POST"
 
 
-def test_http_put(client):
-    infos = HttpBinApi(client).put()
+@mark.asyncio
+async def test_http_put(client):
+    api = HttpBinApi(client)
+    infos = await api.put()
     assert infos.method == "PUT"
 
 
-def test_http_delete(client):
-    infos = HttpBinApi(client).delete()
+@mark.asyncio
+async def test_http_delete(client):
+    api = HttpBinApi(client)
+    infos = await api.delete()
     assert infos.method == "DELETE"
 
 
-def test_http_patch(client):
-    infos = HttpBinApi(client).patch()
+@mark.asyncio
+async def test_http_patch(client):
+    api = HttpBinApi(client)
+    infos = await api.patch()
     assert infos.method == "PATCH"

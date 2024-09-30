@@ -1,9 +1,9 @@
 from dataclasses import dataclass, field
 from functools import partial, wraps
 from inspect import Signature, signature
-from typing import Any, Callable, Dict, Mapping, Self, Tuple, Type, TypeVar
+from typing import Any, Awaitable, Callable, Dict, Mapping, Self, Tuple, Type, TypeVar
 
-from httpx import Client, Request, Response
+from httpx import AsyncClient, Request, Response
 from pydantic import BaseModel
 
 from .model import Body, FileBody, Header, Path, Query, RapidApi
@@ -35,7 +35,7 @@ class CustomParameters:
 
 
 def build_request(
-    client: Client,
+    client: AsyncClient,
     signature: Signature,
     parameters: CustomParameters,
     method: str,
@@ -78,13 +78,13 @@ def build_request(
 
 def http(
     path: str, method: str = "GET", response_class: Type[RESP] = Response
-) -> Callable[[Callable], Callable[..., RESP]]:
-    def decorator(func: Callable) -> Callable[..., RESP]:
+) -> Callable[[Callable], Callable[..., Awaitable[RESP]]]:
+    def decorator(func: Callable) -> Callable[..., Awaitable[RESP]]:
         sig = signature(func)
         custom_parameters = CustomParameters.from_sig(sig)
 
         @wraps(func)
-        def wrapper(*args, **kwargs) -> RESP:
+        async def wrapper(*args, **kwargs) -> RESP:
             assert isinstance(
                 args[0], RapidApi
             ), f"{args[0]} should be an instance of RapidApi"
@@ -92,7 +92,7 @@ def http(
             request = build_request(
                 client, sig, custom_parameters, method, path, args, kwargs
             )
-            response = client.send(request)
+            response = await client.send(request)
             if issubclass(response_class, BaseModel):
                 response.raise_for_status()
                 return response_class.model_validate_json(response.content)

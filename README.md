@@ -6,7 +6,7 @@
 
 # Rapid Api Client
 
-Library to rapidly develop API clients based on [Pydantic](https://docs.pydantic.dev/) and [Httpx](https://www.python-httpx.org/) using *decorators* and *annotations*.
+Library to rapidly develop asynchronous API clients based on [Pydantic](https://docs.pydantic.dev/) and [Httpx](https://www.python-httpx.org/) using *decorators* and *annotations*.
 
 This project is largely inspired by [FastAPI](https://fastapi.tiangolo.com/).
 
@@ -25,15 +25,17 @@ Declare your API using decorators and annotations (the method does not need any 
 class GithubIssuesApi(RapidApi):
 
     @get("/repos/{owner}/{repo}/issues", response_class=RootModel[List[Issue]])
-    def list_issues(self, owner: Annotated[str, Path()], repo: Annotated[str, Path()]): ...
+    async def list_issues(self, owner: Annotated[str, Path()], repo: Annotated[str, Path()]): ...
 
 ```
 
 Use it 
 
 ```python
-    for issue in GithubIssuesApi().list_issues("essembeh", "rapid-api-client").root:
-        print("Issue:", issue)
+    api = GithubIssuesApi(client)
+    issues = await api.list_issues("essembeh", "rapid-api-client", state="closed")
+    for issue in issues.root:
+        print(f"Issue: {issue.title} [{issue.url}]")
 ```
 
 # Features
@@ -46,13 +48,13 @@ Any HTTP method can be used with `http` decorator
 class MyApi(RapidApi)
 
     @http("/anything") # default is GET
-    def get(self): ...
+    async def get(self): ...
 
     @http("/anything", method="POST")
-    def post(self): ...
+    async def post(self): ...
 
     @http("/anything", method="DELETE)
-    def delete(self): ...
+    async def delete(self): ...
 ```
 
 Convenient decorators are available like `get`, `post`, `delete`, `put`, `patch`
@@ -61,13 +63,13 @@ Convenient decorators are available like `get`, `post`, `delete`, `put`, `patch`
 class MyApi(RapidApi)
 
     @get("/anything")
-    def get(self): ...
+    async def get(self): ...
 
     @post("/anything")
-    def post(self): ...
+    async def post(self): ...
 
     @delete("/anything")
-    def delete(self): ...
+    async ef delete(self): ...
 ```
 
 
@@ -86,11 +88,11 @@ class MyApi(RapidApi)
 
     # this method return a httpx.Response
     @get("/user/me")
-    def get_user_resp(self): ...
+    async def get_user_resp(self): ...
 
     # this method returns a User class
     @get("/user/me", response_class=User)
-    def get_user(self): ...
+    async def get_user(self): ...
 ```
 
 
@@ -102,11 +104,11 @@ Like `fastapi` you can use your method arguments to build the api path to call.
 class MyApi(RapidApi)
 
     @get("/user/{user_id}")
-    def get_user(self, user_id: Annotated[int, Path()]): ...
+    async def get_user(self, user_id: Annotated[int, Path()]): ...
 
     # Path parameters dans have a default value
     @get("/user/{user_id}")
-    def get_user(self, user_id: Annotated[int, Path()] = 1): ...
+    async def get_user(self, user_id: Annotated[int, Path()] = 1): ...
 
 ```
 
@@ -118,15 +120,15 @@ You can add `query parameters` to your request using the `Query` annotation.
 class MyApi(RapidApi)
 
     @get("/issues")
-    def get_issues(self, sort: Annotated[str, Query()]): ...
+    async def get_issues(self, sort: Annotated[str, Query()]): ...
 
     # Query parameters can have a default value
     @get("/issues")
-    def get_issues_default(self, sort: Annotated[str, Query()] = "date"): ...
+    async def get_issues_default(self, sort: Annotated[str, Query()] = "date"): ...
 
     # Query parameters can have an alias to change the key in the http request
     @get("/issues")
-    def get_issues_alias(self, sort: Annotated[str, Query(alias="sort-by")] = "date"): ...
+    async def get_issues_alias(self, sort: Annotated[str, Query(alias="sort-by")] = "date"): ...
 ```
 
 
@@ -138,16 +140,39 @@ You can add `headers` to your request using the `Header` annotation.
 class MyApi(RapidApi)
 
     @get("/issues")
-    def get_issues(self, version: Annotated[str, Header()]): ...
+    async def get_issues(self, version: Annotated[str, Header()]): ...
 
     # Headers can have a default value
     @get("/issues")
-    def get_issues(self, version: Annotated[str, Header()] = "1"): ...
+    async def get_issues(self, version: Annotated[str, Header()] = "1"): ...
 
     # Headers can have an alias to change the key in the http request
     @get("/issues")
-    def get_issues(self, version: Annotated[str, Header(alias="X-API-Version")] = "1"): ...
+    async def get_issues(self, version: Annotated[str, Header(alias="X-API-Version")] = "1"): ...
 ```
 
 ## Body parameter
 
+You can send a body with your request using the `Body` annotation. 
+
+This body can be 
+ - a *raw* object with `Body`
+ - a *Pydantic* object  with `PydanticBody`
+ - one or more files with `FileBody`
+
+ ```python
+class MyApi(RapidApi)
+
+    # send a string in request content
+    @post("/string")
+    async def message(self, body: Annotated[str, Body()]): ...
+
+    # send a string in request content
+    @post("/model")
+    async def model(self, body: Annotated[MyPydanticClass, PydanticBody()]): ...
+
+    # send a multiple files
+    @post("/files")
+    async def model(self, report: Annotated[bytes, FileBody()], image: Annotated[bytes, FileBody()]): ...
+
+ ```

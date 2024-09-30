@@ -1,8 +1,9 @@
+import asyncio
 from datetime import datetime
 from os import environ
 from typing import Annotated, List
 
-from httpx import Client
+from httpx import AsyncClient
 from pydantic import BaseModel, HttpUrl, RootModel
 
 from rapid_api_client import Path, RapidApi, get
@@ -22,7 +23,7 @@ class Issue(BaseModel):
 
 class GithubIssuesApi(RapidApi):
     @get("/repos/{owner}/{repo}/issues", response_class=RootModel[List[Issue]])
-    def list_issues(
+    async def list_issues(
         self,
         owner: Annotated[str, Path()],
         repo: Annotated[str, Path()],
@@ -34,16 +35,20 @@ class GithubIssuesApi(RapidApi):
     ): ...
 
 
-if __name__ == "__main__":
+async def main():
     """
     Ensure you have an environment variable GITHUB_TOKEN with a valid token
     """
-    client = Client(
+    client = AsyncClient(
         base_url="https://api.github.com",
         headers={"Authorization": f"Bearer {environ['GITHUB_TOKEN']}"},
     )
 
     api = GithubIssuesApi(client)
-
-    for issue in api.list_issues("fastapi", "fastapi", state="closed").root:
+    issues = await api.list_issues("fastapi", "fastapi", state="closed")
+    for issue in issues.root:
         print(f"Issue: {issue.title} [{issue.url}]")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
