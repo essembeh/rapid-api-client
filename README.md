@@ -53,7 +53,7 @@ class MyApi(RapidApi)
     @http("/anything", method="POST")
     async def post(self): ...
 
-    @http("/anything", method="DELETE)
+    @http("/anything", method="DELETE")
     async def delete(self): ...
 ```
 
