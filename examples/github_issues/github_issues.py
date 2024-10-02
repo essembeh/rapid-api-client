@@ -4,7 +4,7 @@ from os import environ
 from typing import Annotated, List
 
 from httpx import AsyncClient
-from pydantic import BaseModel, HttpUrl, RootModel
+from pydantic import BaseModel, HttpUrl, TypeAdapter
 
 from rapid_api_client import Path, RapidApi, get
 from rapid_api_client.model import Header, Query
@@ -22,7 +22,7 @@ class Issue(BaseModel):
 
 
 class GithubIssuesApi(RapidApi):
-    @get("/repos/{owner}/{repo}/issues", response_class=RootModel[List[Issue]])
+    @get("/repos/{owner}/{repo}/issues", response_class=TypeAdapter(List[Issue]))
     async def list_issues(
         self,
         owner: Annotated[str, Path()],
@@ -46,7 +46,7 @@ async def main():
 
     api = GithubIssuesApi(client)
     issues = await api.list_issues("fastapi", "fastapi", state="closed")
-    for issue in issues.root:
+    for issue in issues:
         print(f"Issue: {issue.title} [{issue.url}]")
 
 

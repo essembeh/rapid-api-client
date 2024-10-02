@@ -1,15 +1,28 @@
 from dataclasses import dataclass, field
 from functools import partial, wraps
 from inspect import Signature, signature
-from typing import Any, Awaitable, Callable, Dict, Mapping, Self, Tuple, Type, TypeVar
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    Mapping,
+    Self,
+    Tuple,
+    Type,
+    TypeVar,
+    overload,
+)
 
 from httpx import AsyncClient, Request, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, TypeAdapter
+from pydantic_xml import BaseXmlModel
 
-from .model import Body, FileBody, Header, Path, Query, RapidApi, pydantic_xml
+from .model import Body, FileBody, Header, Path, Query, RapidApi
 from .utils import filter_none_values, find_annotation
 
-RESP = TypeVar("RESP", bound=BaseModel | Response)
+BM = TypeVar("BM", bound=BaseModel)
+T = TypeVar("T")
 
 
 @dataclass
@@ -76,15 +89,71 @@ def build_request(
     )
 
 
+def handle_response(
+    response: Response,
+    response_class: Type[Response | str | bytes | BM] | TypeAdapter[T],
+) -> Response | str | bytes | BM | T:
+    # do not check response status code if we return the Response itself
+    if response_class is Response:
+        return response
+    # before parsing the response, check its status
+    response.raise_for_status()
+    if response_class is str:
+        return response.text
+    if response_class is bytes:
+        return response.content
+    if isinstance(response_class, TypeAdapter):
+        return response_class.validate_json(response.content)
+    if issubclass(response_class, BaseXmlModel):
+        return response_class.from_xml(response.content)
+    if issubclass(response_class, BaseModel):
+        return response_class.model_validate_json(response.content)
+    raise ValueError(f"Response class not supported: {response_class}")
+
+
+@overload
 def http(
-    path: str, method: str = "GET", response_class: Type[RESP] = Response
-) -> Callable[[Callable], Callable[..., Awaitable[RESP]]]:
-    def decorator(func: Callable) -> Callable[..., Awaitable[RESP]]:
+    method: str, path: str, response_class: Type[Response] = Response
+) -> Callable[[Callable], Callable[..., Awaitable[Response]]]: ...
+
+
+@overload
+def http(
+    method: str, path: str, response_class: Type[str]
+) -> Callable[[Callable], Callable[..., Awaitable[str]]]: ...
+
+
+@overload
+def http(
+    method: str, path: str, response_class: Type[bytes]
+) -> Callable[[Callable], Callable[..., Awaitable[bytes]]]: ...
+
+
+@overload
+def http(
+    method: str, path: str, response_class: Type[BM]
+) -> Callable[[Callable], Callable[..., Awaitable[BM]]]: ...
+
+
+@overload
+def http(
+    method: str, path: str, response_class: TypeAdapter[T]
+) -> Callable[[Callable], Callable[..., Awaitable[T]]]: ...
+
+
+def http(
+    method: str,
+    path: str,
+    response_class: Type[BM | str | bytes | Response] | TypeAdapter[T] = Response,
+) -> Callable[[Callable], Callable[..., Awaitable[BM | str | bytes | Response | T]]]:
+    def decorator(
+        func: Callable,
+    ) -> Callable[..., Awaitable[BM | str | bytes | Response | T]]:
         sig = signature(func)
         custom_parameters = CustomParameters.from_sig(sig)
 
         @wraps(func)
-        async def wrapper(*args, **kwargs) -> RESP:
+        async def wrapper(*args, **kwargs) -> BM | str | bytes | Response | T:
             assert isinstance(
                 args[0], RapidApi
             ), f"{args[0]} should be an instance of RapidApi"
@@ -93,23 +162,15 @@ def http(
                 client, sig, custom_parameters, method, path, args, kwargs
             )
             response = await client.send(request)
-            if pydantic_xml is not None and issubclass(
-                response_class, pydantic_xml.BaseXmlModel
-            ):
-                response.raise_for_status()
-                return response_class.from_xml(response.content)
-            if issubclass(response_class, BaseModel):
-                response.raise_for_status()
-                return response_class.model_validate_json(response.content)
-            return response
+            return handle_response(response, response_class)
 
         return wrapper
 
     return decorator
 
 
-get = partial(http, method="GET")
-post = partial(http, method="POST")
-delete = partial(http, method="DELETE")
-put = partial(http, method="PUT")
-patch = partial(http, method="PATCH")
+get = partial(http, "GET")
+post = partial(http, "POST")
+delete = partial(http, "DELETE")
+put = partial(http, "PUT")
+patch = partial(http, "PATCH")

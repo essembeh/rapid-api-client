@@ -47,13 +47,13 @@ Any HTTP method can be used with `http` decorator
 ```python
 class MyApi(RapidApi)
 
-    @http("/anything") # default is GET
+    @get("/anything")
     async def get(self): ...
 
-    @http("/anything", method="POST")
+    @post("/anything")
     async def post(self): ...
 
-    @http("/anything", method="DELETE")
+    @delete("/anything")
     async def delete(self): ...
 ```
 

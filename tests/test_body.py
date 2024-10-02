@@ -3,14 +3,14 @@ from typing import Annotated
 from pydantic import BaseModel
 from pytest import mark
 
-from rapid_api_client import Body, FileBody, PydanticBody, RapidApi, http
+from rapid_api_client import Body, FileBody, PydanticBody, RapidApi, post
 from tests.conftest import Infos
 
 
 @mark.asyncio
 async def test_body_str(client):
     class HttpBinApi(RapidApi):
-        @http("/anything", method="POST", response_class=Infos)
+        @post("/anything", response_class=Infos)
         async def test(self, body: Annotated[str, Body()]): ...
 
     api = HttpBinApi(client)
@@ -26,7 +26,7 @@ async def test_body_pydantic(client):
         age: int
 
     class HttpBinApi(RapidApi):
-        @http("/anything", method="POST", response_class=Infos)
+        @post("/anything", response_class=Infos)
         def test(self, body: Annotated[User, PydanticBody()]): ...
 
     api = HttpBinApi(client)
@@ -40,7 +40,7 @@ async def test_body_pydantic(client):
 @mark.asyncio
 async def test_body_files(client):
     class HttpBinApi(RapidApi):
-        @http("/anything", method="POST", response_class=Infos)
+        @post("/anything", response_class=Infos)
         def test(
             self,
             file1: Annotated[str, FileBody()],

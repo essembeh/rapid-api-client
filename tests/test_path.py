@@ -2,14 +2,14 @@ from typing import Annotated
 
 from pytest import mark
 
-from rapid_api_client import Path, RapidApi, http
+from rapid_api_client import Path, RapidApi, get
 from tests.conftest import Infos
 
 
 @mark.asyncio
 async def test_path(client):
     class HttpBinApi(RapidApi):
-        @http("/anything/{myparam}", response_class=Infos)
+        @get("/anything/{myparam}", response_class=Infos)
         def test(self, myparam: Annotated[str, Path()]): ...
 
     api = HttpBinApi(client)
@@ -21,7 +21,7 @@ async def test_path(client):
 @mark.asyncio
 async def test_path_default(client):
     class HttpBinApi(RapidApi):
-        @http("/anything/{myparam}", response_class=Infos)
+        @get("/anything/{myparam}", response_class=Infos)
         def test(self, myparam: Annotated[str, Path()] = "bar"): ...
 
     api = HttpBinApi(client)

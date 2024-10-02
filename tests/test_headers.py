@@ -2,14 +2,14 @@ from typing import Annotated
 
 from pytest import mark
 
-from rapid_api_client import Header, RapidApi, http
+from rapid_api_client import Header, RapidApi, get
 from tests.conftest import Infos
 
 
 @mark.asyncio
 async def test_header(client):
     class HttpBinApi(RapidApi):
-        @http("/anything", response_class=Infos)
+        @get("/anything", response_class=Infos)
         def test(self, myheader: Annotated[str, Header()]): ...
 
     api = HttpBinApi(client)
@@ -21,7 +21,7 @@ async def test_header(client):
 @mark.asyncio
 async def test_header_default(client):
     class HttpBinApi(RapidApi):
-        @http("/anything", response_class=Infos)
+        @get("/anything", response_class=Infos)
         def test(self, myheader: Annotated[str, Header()] = "bar"): ...
 
     api = HttpBinApi(client)
@@ -36,7 +36,7 @@ async def test_header_default(client):
 @mark.asyncio
 async def test_header_none(client):
     class HttpBinApi(RapidApi):
-        @http("/anything", response_class=Infos)
+        @get("/anything", response_class=Infos)
         def test(self, myheader: Annotated[str | None, Header()] = None): ...
 
     api = HttpBinApi(client)
@@ -51,7 +51,7 @@ async def test_header_none(client):
 @mark.asyncio
 async def test_header_alias(client):
     class HttpBinApi(RapidApi):
-        @http("/anything", response_class=Infos)
+        @get("/anything", response_class=Infos)
         def test(self, myheader: Annotated[str, Header(alias="otherheader")]): ...
 
     api = HttpBinApi(client)
