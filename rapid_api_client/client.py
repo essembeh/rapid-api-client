@@ -55,6 +55,7 @@ def build_request(
     path: str,
     args: Tuple[Any],
     kwargs: Mapping[str, Any],
+    timeout: float | None,
 ) -> Request:
     # valuate arguments with default values
     ba = signature.bind(*args, **kwargs)
@@ -84,8 +85,19 @@ def build_request(
             else:
                 content = annot.serialize(value)
 
+    # handle extra optional kwargs
+    extra_kwargs = {}
+    if timeout is not None:
+        extra_kwargs["timeout"] = timeout
+
     return client.build_request(
-        method, path, headers=headers, params=params, content=content, files=files
+        method,
+        path,
+        headers=headers,
+        params=params,
+        content=content,
+        files=files,
+        **extra_kwargs,
     )
 
 
@@ -113,31 +125,46 @@ def handle_response(
 
 @overload
 def http(
-    method: str, path: str, response_class: Type[Response] = Response
+    method: str,
+    path: str,
+    response_class: Type[Response] = Response,
+    timeout: float | None = None,
 ) -> Callable[[Callable], Callable[..., Awaitable[Response]]]: ...
 
 
 @overload
 def http(
-    method: str, path: str, response_class: Type[str]
+    method: str,
+    path: str,
+    response_class: Type[str],
+    timeout: float | None = None,
 ) -> Callable[[Callable], Callable[..., Awaitable[str]]]: ...
 
 
 @overload
 def http(
-    method: str, path: str, response_class: Type[bytes]
+    method: str,
+    path: str,
+    response_class: Type[bytes],
+    timeout: float | None = None,
 ) -> Callable[[Callable], Callable[..., Awaitable[bytes]]]: ...
 
 
 @overload
 def http(
-    method: str, path: str, response_class: Type[BM]
+    method: str,
+    path: str,
+    response_class: Type[BM],
+    timeout: float | None = None,
 ) -> Callable[[Callable], Callable[..., Awaitable[BM]]]: ...
 
 
 @overload
 def http(
-    method: str, path: str, response_class: TypeAdapter[T]
+    method: str,
+    path: str,
+    response_class: TypeAdapter[T],
+    timeout: float | None = None,
 ) -> Callable[[Callable], Callable[..., Awaitable[T]]]: ...
 
 
@@ -145,6 +172,7 @@ def http(
     method: str,
     path: str,
     response_class: Type[BM | str | bytes | Response] | TypeAdapter[T] = Response,
+    timeout: float | None = None,
 ) -> Callable[[Callable], Callable[..., Awaitable[BM | str | bytes | Response | T]]]:
     def decorator(
         func: Callable,
@@ -159,7 +187,7 @@ def http(
             ), f"{args[0]} should be an instance of RapidApi"
             client = args[0].client
             request = build_request(
-                client, sig, custom_parameters, method, path, args, kwargs
+                client, sig, custom_parameters, method, path, args, kwargs, timeout
             )
             response = await client.send(request)
             return handle_response(response, response_class)
