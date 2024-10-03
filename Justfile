@@ -1,5 +1,7 @@
 test pytest_args="":
-    poetry run -- pytest {{pytest_args}} tests/
+    poetry run -- pytest --cov=rapid_api_client {{pytest_args}} tests/
+    poetry run -- coverage html
+    xdg-open htmlcov/index.html
 
 pylint:
     poetry run -- pylint rapid_api_client

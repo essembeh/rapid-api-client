@@ -102,3 +102,15 @@ async def test_response_error_raise(client):
 
     with raises(HTTPError):
         await api.test()
+
+
+@mark.asyncio
+async def test_response_unsupported(client):
+    class HttpBinApi(RapidApi):
+        @get("/anything", response_class=int)
+        def test(self): ...
+
+    api = HttpBinApi(client)
+
+    with raises(ValueError):
+        await api.test()
