@@ -1,6 +1,12 @@
 test pytest_args="":
     poetry run -- pytest {{pytest_args}} tests/
 
+pylint:
+    poetry run -- pylint rapid_api_client
+
+mypy:
+    poetry run -- mypy rapid_api_client
+
 release bump="patch":
     echo "{{bump}}" | grep -E "^(major|minor|patch)$"
     poetry version "{{bump}}"

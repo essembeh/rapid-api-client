@@ -1,3 +1,7 @@
+"""
+Decorator used to build the httpx request
+"""
+
 from dataclasses import dataclass, field
 from functools import partial, wraps
 from inspect import Signature, signature
@@ -18,7 +22,7 @@ from httpx import AsyncClient, Request, Response
 from pydantic import BaseModel, TypeAdapter
 from pydantic_xml import BaseXmlModel
 
-from .model import Body, FileBody, Header, Path, Query, RapidApi
+from .model import Body, CustomParameter, FileBody, Header, Path, Query, RapidApi
 from .utils import filter_none_values, find_annotation
 
 BM = TypeVar("BM", bound=BaseModel)
@@ -27,15 +31,23 @@ T = TypeVar("T")
 
 @dataclass
 class CustomParameters:
+    """
+    Class containing all custom parameters used to build the request.
+    """
+
     path: Dict[str, Path] = field(default_factory=dict)
     query: Dict[str, Query] = field(default_factory=dict)
     headers: Dict[str, Header] = field(default_factory=dict)
     body: Dict[str, Body] = field(default_factory=dict)
 
     @classmethod
-    def from_sig(cls, signature: Signature) -> Self:
+    def from_sig(cls, sig: Signature) -> Self:
+        """
+        Iterate over parameters of given function to find annotated parameters
+        """
         out = cls()
-        for parameter in signature.parameters.values():
+        for parameter in sig.parameters.values():
+            annot: CustomParameter | None = None
             if (annot := find_annotation(parameter, Path)) is not None:
                 out.path[parameter.name] = annot
             if (annot := find_annotation(parameter, Query)) is not None:
@@ -49,7 +61,7 @@ class CustomParameters:
 
 def build_request(
     client: AsyncClient,
-    signature: Signature,
+    sig: Signature,
     parameters: CustomParameters,
     method: str,
     path: str,
@@ -57,54 +69,52 @@ def build_request(
     kwargs: Mapping[str, Any],
     timeout: float | None,
 ) -> Request:
+    """
+    Build the httpx request with given custom parameters.
+    """
     # valuate arguments with default values
-    ba = signature.bind(*args, **kwargs)
+    ba = sig.bind(*args, **kwargs)
     ba.apply_defaults()
 
     # resolve the api path
     path = path.format(**{k: ba.arguments[k] for k in parameters.path})
 
-    headers = filter_none_values(
+    build_kwargs: Dict[str, Any] = {}
+
+    build_kwargs["headers"] = filter_none_values(
         {
             annot.alias or param: ba.arguments[param]
             for param, annot in parameters.headers.items()
         }
     )
-    params = filter_none_values(
+    build_kwargs["params"] = filter_none_values(
         {
             annot.alias or param: ba.arguments[param]
             for param, annot in parameters.query.items()
         }
     )
-    content = None
-    files = {}
     for param, annot in parameters.body.items():
         if (value := ba.arguments[param]) is not None:
             if isinstance(annot, FileBody):
+                files = build_kwargs.setdefault("files", {})
                 files[annot.alias or param] = annot.serialize(value)
             else:
-                content = annot.serialize(value)
+                build_kwargs["content"] = annot.serialize(value)
 
     # handle extra optional kwargs
-    extra_kwargs = {}
     if timeout is not None:
-        extra_kwargs["timeout"] = timeout
+        build_kwargs["timeout"] = timeout
 
-    return client.build_request(
-        method,
-        path,
-        headers=headers,
-        params=params,
-        content=content,
-        files=files,
-        **extra_kwargs,
-    )
+    return client.build_request(method, path, **build_kwargs)
 
 
 def handle_response(
     response: Response,
     response_class: Type[Response | str | bytes | BM] | TypeAdapter[T],
 ) -> Response | str | bytes | BM | T:
+    """
+    Parse the response given the expected class
+    """
     # do not check response status code if we return the Response itself
     if response_class is Response:
         return response
@@ -174,6 +184,10 @@ def http(
     response_class: Type[BM | str | bytes | Response] | TypeAdapter[T] = Response,
     timeout: float | None = None,
 ) -> Callable[[Callable], Callable[..., Awaitable[BM | str | bytes | Response | T]]]:
+    """
+    Main decorator used to generate an http request and return its result
+    """
+
     def decorator(
         func: Callable,
     ) -> Callable[..., Awaitable[BM | str | bytes | Response | T]]:

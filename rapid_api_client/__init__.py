@@ -1,3 +1,7 @@
+"""
+rapid-api-client
+"""
+
 from importlib.metadata import version
 
 from .client import delete, get, http, patch, post, put
