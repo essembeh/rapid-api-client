@@ -4,15 +4,16 @@ from pydantic_xml import BaseXmlModel, attr
 from pytest import mark
 
 from rapid_api_client import RapidApi, get, post
-from rapid_api_client.model import PydanticXmlBody
-from tests.conftest import Infos
+from rapid_api_client.annotations import PydanticXmlBody
+
+from .conftest import Infos
 
 
 class XmlModel(BaseXmlModel, tag="slideshow"):
     title: str = attr("title")
 
 
-@mark.asyncio
+@mark.asyncio(loop_scope="module")
 async def test_get_xml(client):
     class HttpBinApi(RapidApi):
         @get("/xml", response_class=XmlModel)
@@ -24,7 +25,7 @@ async def test_get_xml(client):
     assert model.title == "Sample Slide Show"
 
 
-@mark.asyncio
+@mark.asyncio(loop_scope="module")
 async def test_post_xml(client):
     class HttpBinApi(RapidApi):
         @post("/anything", response_class=Infos)

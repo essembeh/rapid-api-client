@@ -5,10 +5,11 @@ from pydantic import TypeAdapter
 from pytest import mark, raises
 
 from rapid_api_client import RapidApi, get
-from tests.conftest import Infos
+
+from .conftest import Infos
 
 
-@mark.asyncio
+@mark.asyncio(loop_scope="module")
 async def test_response_raw(client):
     class HttpBinApi(RapidApi):
         @get("/anything")
@@ -21,7 +22,7 @@ async def test_response_raw(client):
     assert resp.status_code == 200
 
 
-@mark.asyncio
+@mark.asyncio(loop_scope="module")
 async def test_response_model(client):
     class HttpBinApi(RapidApi):
         @get("/anything", response_class=Infos)
@@ -35,7 +36,7 @@ async def test_response_model(client):
     assert isinstance(resp, Infos)
 
 
-@mark.asyncio
+@mark.asyncio(loop_scope="module")
 async def test_response_str(client):
     class HttpBinApi(RapidApi):
         @get("/anything", response_class=str)
@@ -48,7 +49,7 @@ async def test_response_str(client):
     assert isinstance(resp, str)
 
 
-@mark.asyncio
+@mark.asyncio(loop_scope="module")
 async def test_response_bytes(client):
     class HttpBinApi(RapidApi):
         @get("/anything", response_class=bytes)
@@ -60,7 +61,7 @@ async def test_response_bytes(client):
     assert isinstance(resp, bytes)
 
 
-@mark.asyncio
+@mark.asyncio(loop_scope="module")
 async def test_response_typeadapter(client):
     @dataclass
     class Infos2:
@@ -79,7 +80,7 @@ async def test_response_typeadapter(client):
     assert isinstance(resp, Infos2)
 
 
-@mark.asyncio
+@mark.asyncio(loop_scope="module")
 async def test_response_error(client):
     class HttpBinApi(RapidApi):
         @get("/status/500")
@@ -92,7 +93,7 @@ async def test_response_error(client):
     assert resp.status_code == 500
 
 
-@mark.asyncio
+@mark.asyncio(loop_scope="module")
 async def test_response_error_raise(client):
     class HttpBinApi(RapidApi):
         @get("/status/500", response_class=Infos)
@@ -101,16 +102,4 @@ async def test_response_error_raise(client):
     api = HttpBinApi(client)
 
     with raises(HTTPError):
-        await api.test()
-
-
-@mark.asyncio
-async def test_response_unsupported(client):
-    class HttpBinApi(RapidApi):
-        @get("/anything", response_class=int)
-        def test(self): ...
-
-    api = HttpBinApi(client)
-
-    with raises(ValueError):
         await api.test()

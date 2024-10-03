@@ -102,7 +102,7 @@ class MyApi(RapidApi)
 
     # this method return a httpx.Response
     @get("/user/me")
-    async def get_user_resp(self): ...
+    async def get_user_raw(self): ...
 
     # this method returns a User class
     @get("/user/me", response_class=User)
@@ -158,11 +158,11 @@ class MyApi(RapidApi)
 
     # Headers can have a default value
     @get("/issues")
-    async def get_issues(self, version: Annotated[str, Header()] = "1"): ...
+    async def get_issues_default(self, version: Annotated[str, Header()] = "1"): ...
 
     # Headers can have an alias to change the key in the http request
     @get("/issues")
-    async def get_issues(self, version: Annotated[str, Header(alias="X-API-Version")] = "1"): ...
+    async def get_issues_version(self, version: Annotated[str, Header(alias="X-API-Version")] = "1"): ...
 ```
 
 ## Body parameter
@@ -179,15 +179,15 @@ class MyApi(RapidApi)
 
     # send a string in request content
     @post("/string")
-    async def message(self, body: Annotated[str, Body()]): ...
+    async def post_string(self, body: Annotated[str, Body()]): ...
 
     # send a string in request content
     @post("/model")
-    async def model(self, body: Annotated[MyPydanticClass, PydanticBody()]): ...
+    async def post_model(self, body: Annotated[MyPydanticClass, PydanticBody()]): ...
 
     # send a multiple files
     @post("/files")
-    async def model(self, report: Annotated[bytes, FileBody()], image: Annotated[bytes, FileBody()]): ...
+    async def post_files(self, report: Annotated[bytes, FileBody()], image: Annotated[bytes, FileBody()]): ...
 
  ```
 

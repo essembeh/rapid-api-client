@@ -3,10 +3,11 @@ from typing import Annotated
 from pytest import mark
 
 from rapid_api_client import Path, RapidApi, get
-from tests.conftest import Infos
+
+from .conftest import Infos
 
 
-@mark.asyncio
+@mark.asyncio(loop_scope="module")
 async def test_path(client):
     class HttpBinApi(RapidApi):
         @get("/anything/{myparam}", response_class=Infos)
@@ -18,7 +19,7 @@ async def test_path(client):
     assert infos.url.path == "/anything/foo"
 
 
-@mark.asyncio
+@mark.asyncio(loop_scope="module")
 async def test_path_default(client):
     class HttpBinApi(RapidApi):
         @get("/anything/{myparam}", response_class=Infos)

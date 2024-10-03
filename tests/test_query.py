@@ -3,10 +3,11 @@ from typing import Annotated
 from pytest import mark
 
 from rapid_api_client import Query, RapidApi, get
-from tests.conftest import Infos
+
+from .conftest import Infos
 
 
-@mark.asyncio
+@mark.asyncio(loop_scope="module")
 async def test_query(client):
     class HttpBinApi(RapidApi):
         @get("/anything", response_class=Infos)
@@ -20,7 +21,7 @@ async def test_query(client):
     assert query_params["myparam"] == "foo"
 
 
-@mark.asyncio
+@mark.asyncio(loop_scope="module")
 async def test_query_default(client):
     class HttpBinApi(RapidApi):
         @get("/anything", response_class=Infos)
@@ -39,7 +40,7 @@ async def test_query_default(client):
     assert query_params["myparam"] == "bar"
 
 
-@mark.asyncio
+@mark.asyncio(loop_scope="module")
 async def test_query_none(client):
     class HttpBinApi(RapidApi):
         @get("/anything", response_class=Infos)
@@ -57,7 +58,7 @@ async def test_query_none(client):
     assert len(query_params) == 0
 
 
-@mark.asyncio
+@mark.asyncio(loop_scope="module")
 async def test_query_alias(client):
     class HttpBinApi(RapidApi):
         @get("/anything", response_class=Infos)

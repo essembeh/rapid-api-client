@@ -4,10 +4,11 @@ from pydantic import BaseModel
 from pytest import mark
 
 from rapid_api_client import Body, FileBody, PydanticBody, RapidApi, post
-from tests.conftest import Infos
+
+from .conftest import Infos
 
 
-@mark.asyncio
+@mark.asyncio(loop_scope="module")
 async def test_body_str(client):
     class HttpBinApi(RapidApi):
         @post("/anything", response_class=Infos)
@@ -19,7 +20,7 @@ async def test_body_str(client):
     assert infos.data == "foo"
 
 
-@mark.asyncio
+@mark.asyncio(loop_scope="module")
 async def test_body_pydantic(client):
     class User(BaseModel):
         name: str
@@ -37,7 +38,7 @@ async def test_body_pydantic(client):
     assert user == user2
 
 
-@mark.asyncio
+@mark.asyncio(loop_scope="module")
 async def test_body_files(client):
     class HttpBinApi(RapidApi):
         @post("/anything", response_class=Infos)

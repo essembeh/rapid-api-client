@@ -6,8 +6,7 @@ from typing import Annotated, List
 from httpx import AsyncClient
 from pydantic import BaseModel, HttpUrl, TypeAdapter
 
-from rapid_api_client import Path, RapidApi, get
-from rapid_api_client.model import Header, Query
+from rapid_api_client import Header, Path, Query, RapidApi, get
 
 
 class Issue(BaseModel):

@@ -5,9 +5,9 @@ Utility methods
 from inspect import Parameter
 from typing import Any, Dict, Type, TypeVar, get_args
 
-from rapid_api_client.model import CustomParameter
+from .annotations import BaseAnnotation
 
-CP = TypeVar("CP", bound=CustomParameter)
+BA = TypeVar("BA", bound=BaseAnnotation)
 
 
 def filter_none_values(values: Dict[str, Any | None]) -> Dict[str, Any]:
@@ -17,7 +17,7 @@ def filter_none_values(values: Dict[str, Any | None]) -> Dict[str, Any]:
     return {k: v for k, v in values.items() if v is not None}
 
 
-def find_annotation(param: Parameter, cls: Type[CP]) -> CP | None:
+def find_annotation(param: Parameter, cls: Type[BA]) -> BA | None:
     """
     Check if the given parameter has an annotation which is or is a subclass of given type
     """

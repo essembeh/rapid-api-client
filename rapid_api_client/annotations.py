@@ -2,10 +2,9 @@
 Model classes
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
-from httpx import AsyncClient
 from pydantic import BaseModel
 
 try:
@@ -14,30 +13,20 @@ except ImportError:  # pragma: nocover
     pydantic_xml = None  # type: ignore
 
 
-@dataclass
-class RapidApi:
-    """
-    Represent an API, a RapidApi subclass should have methods decorated with @http
-    which are endpoints
-    """
-
-    client: AsyncClient = field(default_factory=AsyncClient)
-
-
-class CustomParameter:
+class BaseAnnotation:
     """
     Meta class for annotations used to customize the request build
     """
 
 
-class Path(CustomParameter):
+class Path(BaseAnnotation):
     """
     Annotation to declare an argument used to resolve the api path/url
     """
 
 
 @dataclass
-class Query(CustomParameter):
+class Query(BaseAnnotation):
     """
     Annotation to declare an argument used as a query parameter
     """
@@ -46,7 +35,7 @@ class Query(CustomParameter):
 
 
 @dataclass
-class Header(CustomParameter):
+class Header(BaseAnnotation):
     """
     Annotation to declare an argument used as a request header
     """
@@ -54,7 +43,7 @@ class Header(CustomParameter):
     alias: str | None = None
 
 
-class Body(CustomParameter):
+class Body(BaseAnnotation):
     """
     Annotation to declare an argument used as http content for post/put/...
     """

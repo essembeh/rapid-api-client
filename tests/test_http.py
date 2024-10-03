@@ -5,7 +5,8 @@ from httpx import ReadTimeout
 from pytest import mark
 
 from rapid_api_client import Path, RapidApi, delete, get, patch, post, put
-from tests.conftest import Infos
+
+from .conftest import Infos
 
 
 class HttpBinApi(RapidApi):
@@ -28,42 +29,42 @@ class HttpBinApi(RapidApi):
     async def patch(self): ...
 
 
-@mark.asyncio
+@mark.asyncio(loop_scope="module")
 async def test_http_get(client):
     api = HttpBinApi(client)
     infos = await api.get()
     assert infos.method == "GET"
 
 
-@mark.asyncio
+@mark.asyncio(loop_scope="module")
 async def test_http_post(client):
     api = HttpBinApi(client)
     infos = await api.post()
     assert infos.method == "POST"
 
 
-@mark.asyncio
+@mark.asyncio(loop_scope="module")
 async def test_http_put(client):
     api = HttpBinApi(client)
     infos = await api.put()
     assert infos.method == "PUT"
 
 
-@mark.asyncio
+@mark.asyncio(loop_scope="module")
 async def test_http_delete(client):
     api = HttpBinApi(client)
     infos = await api.delete()
     assert infos.method == "DELETE"
 
 
-@mark.asyncio
+@mark.asyncio(loop_scope="module")
 async def test_http_patch(client):
     api = HttpBinApi(client)
     infos = await api.patch()
     assert infos.method == "PATCH"
 
 
-@mark.asyncio
+@mark.asyncio(loop_scope="module")
 async def test_http_timeout(client):
     api = HttpBinApi(client)
     infos = await api.delay(3)

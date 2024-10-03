@@ -15,8 +15,8 @@ class Infos(BaseModel):
     url: HttpUrl
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def client() -> AsyncClient:
     return AsyncClient(
-        base_url="https://httpbin.org", transport=AsyncHTTPTransport(retries=2)
+        base_url="https://httpbin.org", transport=AsyncHTTPTransport(retries=5)
     )
