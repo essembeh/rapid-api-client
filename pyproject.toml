@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "rapid-api-client"
-version = "0.3.3"
+version = "0.3.4"
 description = "Rapidly develop your API clients using decorators and annotations"
 authors = ["Sébastien MB <seb@essembeh.org>"]
 readme = "README.md"
