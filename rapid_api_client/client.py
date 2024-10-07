@@ -104,7 +104,7 @@ class RapidApi:
                     files = build_kwargs.setdefault("files", {})
                     files[annot.alias or param] = annot.serialize(value)
                 else:
-                    build_kwargs["content"] = annot.serialize(value)
+                    build_kwargs[annot.target] = annot.serialize(value)
 
         # handle extra optional kwargs
         if timeout is not None:

@@ -9,6 +9,7 @@ class Infos(BaseModel):
     args: Dict[str, Any]
     data: Any
     files: Dict[str, str]
+    form: Dict[str, str]
     headers: Dict[str, Any]
     method: str | None = None
     origin: IPvAnyAddress

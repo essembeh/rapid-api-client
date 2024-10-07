@@ -3,7 +3,7 @@ Model classes
 """
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -43,10 +43,13 @@ class Header(BaseAnnotation):
     alias: str | None = None
 
 
+@dataclass
 class Body(BaseAnnotation):
     """
     Annotation to declare an argument used as http content for post/put/...
     """
+
+    target: Literal["content", "data", "files"] = "content"
 
     def serialize(self, body: Any) -> str | bytes:
         """
@@ -61,13 +64,8 @@ class FileBody(Body):
     Annotation to declare an argument used as file to be uploaded
     """
 
+    target: Literal["content", "data", "files"] = "files"
     alias: str | None = None
-
-    def serialize(self, body: Any) -> str | bytes:
-        """
-        Serialize the annotated parameter value
-        """
-        return body
 
 
 @dataclass

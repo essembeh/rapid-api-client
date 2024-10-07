@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Dict
 
 from pydantic import BaseModel
 from pytest import mark
@@ -18,6 +18,25 @@ async def test_body_str(client):
 
     infos = await api.test("foo")
     assert infos.data == "foo"
+
+
+@mark.asyncio(loop_scope="module")
+async def test_body_form(client):
+    class User(BaseModel):
+        name: str
+        age: int
+
+    class HttpBinApi(RapidApi):
+        @post("/anything", response_class=Infos)
+        def test(self, body: Annotated[Dict, Body(target="data")]): ...
+
+    api = HttpBinApi(client)
+
+    user = {"name": "John Doe", "age": 42}
+    infos = await api.test(user)
+    assert len(infos.form) == 2
+    assert infos.form["name"] == "John Doe"
+    assert infos.form["age"] == "42"
 
 
 @mark.asyncio(loop_scope="module")
