@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from pytest import mark
 
 from rapid_api_client import Body, FileBody, PydanticBody, RapidApi, post
+from rapid_api_client.annotations import FormBody
 
 from .conftest import Infos
 
@@ -28,15 +29,20 @@ async def test_body_form(client):
 
     class HttpBinApi(RapidApi):
         @post("/anything", response_class=Infos)
-        def test(self, body: Annotated[Dict, Body(target="data")]): ...
+        def test(
+            self,
+            body: Annotated[Dict, FormBody()],
+            extra: Annotated[str, FormBody(alias="extra_param")],
+        ): ...
 
     api = HttpBinApi(client)
 
     user = {"name": "John Doe", "age": 42}
-    infos = await api.test(user)
-    assert len(infos.form) == 2
+    infos = await api.test(user, "foobar")
+    assert len(infos.form) == 3
     assert infos.form["name"] == "John Doe"
     assert infos.form["age"] == "42"
+    assert infos.form["extra_param"] == "foobar"
 
 
 @mark.asyncio(loop_scope="module")

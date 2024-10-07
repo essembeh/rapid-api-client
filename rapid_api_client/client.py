@@ -18,7 +18,7 @@ from httpx import AsyncClient, Request, Response
 from pydantic import BaseModel, TypeAdapter
 from pydantic_xml import BaseXmlModel
 
-from .annotations import BaseAnnotation, Body, FileBody, Header, Path, Query
+from .annotations import BaseAnnotation, Body, FileBody, FormBody, Header, Path, Query
 from .utils import filter_none_values, find_annotation
 
 BM = TypeVar("BM", bound=BaseModel)
@@ -103,8 +103,14 @@ class RapidApi:
                 if isinstance(annot, FileBody):
                     files = build_kwargs.setdefault("files", {})
                     files[annot.alias or param] = annot.serialize(value)
+                elif isinstance(annot, FormBody):
+                    data = build_kwargs.setdefault("data", {})
+                    if isinstance(value, dict):
+                        data.update(value)
+                    else:
+                        data[annot.alias or param] = annot.serialize(value)
                 else:
-                    build_kwargs[annot.target] = annot.serialize(value)
+                    build_kwargs["content"] = annot.serialize(value)
 
         # handle extra optional kwargs
         if timeout is not None:

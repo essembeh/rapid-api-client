@@ -3,7 +3,7 @@ Model classes
 """
 
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -49,8 +49,6 @@ class Body(BaseAnnotation):
     Annotation to declare an argument used as http content for post/put/...
     """
 
-    target: Literal["content", "data", "files"] = "content"
-
     def serialize(self, body: Any) -> str | bytes:
         """
         Serialize the annotated parameter value
@@ -59,12 +57,23 @@ class Body(BaseAnnotation):
 
 
 @dataclass
+class FormBody(Body):
+    """
+    Annotation to declare an argument used as url-encoded parameter
+    If the annotated parameter is a Dict[str, str], its content will be merged to other form parameters,
+    else, its name (or alias) and its serialized value will be added to the the other form parameters.
+
+    """
+
+    alias: str | None = None
+
+
+@dataclass
 class FileBody(Body):
     """
     Annotation to declare an argument used as file to be uploaded
     """
 
-    target: Literal["content", "data", "files"] = "files"
     alias: str | None = None
 
 
