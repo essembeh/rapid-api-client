@@ -3,8 +3,7 @@ from typing import Annotated
 from pydantic_xml import BaseXmlModel, attr
 from pytest import mark
 
-from rapid_api_client import RapidApi, get, post
-from rapid_api_client.annotations import PydanticXmlBody
+from rapid_api_client import PydanticXmlBody, RapidApi, get, post
 
 from .conftest import Infos
 

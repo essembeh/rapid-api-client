@@ -3,8 +3,7 @@ from typing import Annotated, Dict
 from pydantic import BaseModel
 from pytest import mark
 
-from rapid_api_client import Body, FileBody, PydanticBody, RapidApi, post
-from rapid_api_client.annotations import FormBody
+from rapid_api_client import Body, FileBody, FormBody, PydanticBody, RapidApi, post
 
 from .conftest import Infos
 

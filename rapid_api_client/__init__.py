@@ -4,23 +4,34 @@ rapid-api-client
 
 from importlib.metadata import version
 
-from .annotations import Body, FileBody, Header, Path, PydanticBody, Query
+from .annotations import (
+    Body,
+    FileBody,
+    FormBody,
+    Header,
+    Path,
+    PydanticBody,
+    PydanticXmlBody,
+    Query,
+)
 from .client import RapidApi
 from .decorator import delete, get, http, patch, post, put
 
 __version__ = version(__name__)
 __all__ = [
     "Body",
+    "delete",
     "FileBody",
-    "Header",
-    "Path",
-    "PydanticBody",
-    "Query",
-    "RapidApi",
+    "FormBody",
     "get",
+    "Header",
+    "http",
+    "patch",
+    "Path",
     "post",
     "put",
-    "delete",
-    "patch",
-    "http",
+    "PydanticBody",
+    "PydanticXmlBody",
+    "Query",
+    "RapidApi",
 ]
