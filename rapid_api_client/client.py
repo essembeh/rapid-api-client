@@ -16,7 +16,11 @@ from typing import (
 
 from httpx import AsyncClient, Request, Response
 from pydantic import BaseModel, TypeAdapter
-from pydantic_xml import BaseXmlModel
+
+try:
+    import pydantic_xml
+except ImportError:  # pragma: nocover
+    pydantic_xml = None  # type: ignore
 
 from .annotations import BaseAnnotation, Body, FileBody, FormBody, Header, Path, Query
 from .utils import filter_none_values, find_annotation
@@ -137,7 +141,9 @@ class RapidApi:
             return response.content
         if isinstance(response_class, TypeAdapter):
             return response_class.validate_json(response.content)
-        if issubclass(response_class, BaseXmlModel):
+        if pydantic_xml is not None and issubclass(
+            response_class, pydantic_xml.BaseXmlModel
+        ):
             return response_class.from_xml(response.content)
         if issubclass(response_class, BaseModel):
             return response_class.model_validate_json(response.content)
