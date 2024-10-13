@@ -23,6 +23,27 @@ async def test_header(client):
 async def test_header_default(client):
     class HttpBinApi(RapidApi):
         @get("/anything", response_class=Infos)
+        def test(
+            self,
+            myheader: Annotated[str, Header(default="bar")],
+            otherheader: Annotated[str, Header(default_factory=lambda: "BAR")],
+        ): ...
+
+    api = HttpBinApi(client)
+
+    infos = await api.test("foo", "FOO")
+    assert infos.headers["Myheader"] == "foo"
+    assert infos.headers["Otherheader"] == "FOO"
+
+    infos = await api.test()
+    assert infos.headers["Myheader"] == "bar"
+    assert infos.headers["Otherheader"] == "BAR"
+
+
+@mark.asyncio(loop_scope="module")
+async def test_header_default2(client):
+    class HttpBinApi(RapidApi):
+        @get("/anything", response_class=Infos)
         def test(self, myheader: Annotated[str, Header()] = "bar"): ...
 
     api = HttpBinApi(client)
@@ -38,7 +59,7 @@ async def test_header_default(client):
 async def test_header_none(client):
     class HttpBinApi(RapidApi):
         @get("/anything", response_class=Infos)
-        def test(self, myheader: Annotated[str | None, Header()] = None): ...
+        def test(self, myheader: Annotated[str | None, Header(default=None)]): ...
 
     api = HttpBinApi(client)
 

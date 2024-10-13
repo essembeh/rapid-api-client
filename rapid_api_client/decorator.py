@@ -15,7 +15,7 @@ from typing import (
 from httpx import Response
 from pydantic import TypeAdapter
 
-from .client import BM, CustomParameters, RapidApi, T
+from .client import BM, RapidApi, RapidParameters, T
 
 
 @overload
@@ -79,14 +79,14 @@ def http(
         func: Callable,
     ) -> Callable[..., Coroutine[Any, Any, BM | str | bytes | Response | T]]:
         sig = signature(func)
-        custom_parameters = CustomParameters.from_sig(sig)
+        rapid_parameters = RapidParameters.from_sig(sig)
 
         @wraps(func)
         async def wrapper(*args, **kwargs) -> BM | str | bytes | Response | T:
             if not isinstance((api := args[0]), RapidApi):
                 raise ValueError(f"{api} should be an instance of RapidApi")
             request = api._build_request(
-                sig, custom_parameters, method, path, args, kwargs, timeout
+                sig, rapid_parameters, method, path, args, kwargs, timeout
             )
             response = await api.client.send(request)
             return api._handle_response(response, response_class=response_class)

@@ -10,11 +10,14 @@ Library to **rapidly** develop *API clients* in Python, based on [Pydantic](http
 
 ✨ Main features:
 - ✏️ You don't write any code, you only declare the endpoints using *decorators* and *annotations*.
-- 🚚 Support *Pydantic* to automatically parse and validate reponses (and also for posting content).
-- 🏗️ Does not reimplement the low-level http-related logic, it simply uses `httpx.AsyncClient` like you would do and you can customize it.
+- 🪄 Pydantic validation for `Header`, `Query`, `Path` or `Body` parameters.
+- 📤 Support Pydantic to parse and validate reponses content so your method returns a model object if the response is OK.
+- 📥 Also support Pydantic serialization for `Body` with `POST`-like opeations.
+- 🏗️ Does not reimplement the low-level http related logic, it simply relies on `httpx.AsyncClient` like you would do and you can customize it.
 - ⚡️ Asynchronous, because `httpx` and `asyncio` are just amazingly fast.
 
-🙏 This project is inspired by [FastAPI](https://fastapi.tiangolo.com/), I always wanted a library to create an API client that is as simple as *FastAPI* for handling the server-side part.
+🙏 As a Python Backend developer, I've wasted so much time in recent years writing the same API clients over and over using `requests` or `httpx`; At the same time, I could be so efficient by using [FastAPI](https://fastapi.tiangolo.com/); I just wanted to save time for my upcoming projects, thinking that other developers might find it useful too.
+
 
 # Usage 
 
@@ -115,14 +118,23 @@ class MyApi(RapidApi)
 Like `fastapi` you can use your method arguments to build the api path to call.
 
 ```python
-class MyApi(RapidApi)
+class MyApi(RapidApi):
 
+    # Path parameter
     @get("/user/{user_id}")
     async def get_user(self, user_id: Annotated[int, Path()]): ...
 
-    # Path parameters dans have a default value
+    # Path parameters with value validation
     @get("/user/{user_id}")
-    async def get_user(self, user_id: Annotated[int, Path()] = 1): ...
+    async def get_user(self, user_id: Annotated[PositiveInt, Path()]): ...
+
+    # Path parameters with a default value
+    @get("/user/{user_id}")
+    async def get_user(self, user_id: Annotated[int, Path(default=1)]): ...
+
+    # Path parameters with a default value using a factory
+    @get("/user/{user_id}")
+    async def get_user(self, user_id: Annotated[int, Path(default_factory=lambda: 42)]): ...
 
 ```
 
@@ -131,18 +143,27 @@ class MyApi(RapidApi)
 You can add `query parameters` to your request using the `Query` annotation.
 
 ```python
-class MyApi(RapidApi)
+class MyApi(RapidApi):
 
+    # Query parameter
     @get("/issues")
     async def get_issues(self, sort: Annotated[str, Query()]): ...
 
-    # Query parameters can have a default value
+    # Query parameters with value validation
     @get("/issues")
-    async def get_issues_default(self, sort: Annotated[str, Query()] = "date"): ...
+    async def get_issues(self, sort: Annotated[Literal["updated", "id"], Query()]): ...
 
-    # Query parameters can have an alias to change the key in the http request
+    # Query parameter with a default value
     @get("/issues")
-    async def get_issues_alias(self, sort: Annotated[str, Query(alias="sort-by")] = "date"): ...
+    async def get_issues(self, sort: Annotated[str, Query(default="updated")]): ...
+
+    # Query parameter with a default value using a factory
+    @get("/issues")
+    async def get_issues(self, sort: Annotated[str, Query(default_factory=lambda: "updated")]): ...
+
+    # Query parameter with a default value
+    @get("/issues")
+    async def get_issues(self, my_parameter: Annotated[str, Query(alias="sort")]): ...
 ```
 
 
@@ -151,18 +172,27 @@ class MyApi(RapidApi)
 You can add `headers` to your request using the `Header` annotation.
 
 ```python
-class MyApi(RapidApi)
+class MyApi(RapidApi):
 
+    # Header parameter
     @get("/issues")
-    async def get_issues(self, version: Annotated[str, Header()]): ...
+    async def get_issues(self, x_version: Annotated[str, Header()]): ...
 
-    # Headers can have a default value
+    # Header parameters with value validation
     @get("/issues")
-    async def get_issues_default(self, version: Annotated[str, Header()] = "1"): ...
+    async def get_issues(self, x_version: Annotated[Literal["2024.06", "2024.01"], Header()]): ...
 
-    # Headers can have an alias to change the key in the http request
+    # Header parameter with a default value
     @get("/issues")
-    async def get_issues_version(self, version: Annotated[str, Header(alias="X-API-Version")] = "1"): ...
+    async def get_issues(self, x_version: Annotated[str, Header(default="2024.06")]): ...
+
+    # Header parameter with a default value using a factory
+    @get("/issues")
+    async def get_issues(self, x_version: Annotated[str, Header(default_factory=lambda: "2024.06")]): ...
+
+    # Header parameter with a default value
+    @get("/issues")
+    async def get_issues(self, my_parameter: Annotated[str, Header(alias="x-version")]): ...
 ```
 
 ## Body parameter
@@ -175,7 +205,7 @@ This body can be
  - one or more files with `FileBody`
 
  ```python
-class MyApi(RapidApi)
+class MyApi(RapidApi):
 
     # send a string in request content
     @post("/string")
@@ -189,6 +219,10 @@ class MyApi(RapidApi)
     @post("/files")
     async def post_files(self, report: Annotated[bytes, FileBody()], image: Annotated[bytes, FileBody()]): ...
 
+    # send a form
+    @post("/form")
+    def post_form(self, my_param: Annotated[str, FormBody(alias="name")], extra_fields: Annotated[Dict[str, str], FormBody()]): ...
+
  ```
 
  ## Xml Support
@@ -198,7 +232,7 @@ class MyApi(RapidApi)
  ```python
 class ResponseXmlRootModel(BaseXmlModel): ...
 
-class MyApi(RapidApi)
+class MyApi(RapidApi):
 
     # parse response xml content
     @get("/get", response_class=ResponseXmlRootModel)
@@ -209,6 +243,7 @@ class MyApi(RapidApi)
     async def post_xml(self, body: Annotated[ResponseXmlRootModel, PydanticXmlBody()]): ...
 
  ```
+
 
  # Examples
 

@@ -32,16 +32,18 @@ async def test_body_form(client):
             self,
             body: Annotated[Dict, FormBody()],
             extra: Annotated[str, FormBody(alias="extra_param")],
+            default: Annotated[str, FormBody(default="hello")],
         ): ...
 
     api = HttpBinApi(client)
 
     user = {"name": "John Doe", "age": 42}
     infos = await api.test(user, "foobar")
-    assert len(infos.form) == 3
+    assert len(infos.form) == 4
     assert infos.form["name"] == "John Doe"
     assert infos.form["age"] == "42"
     assert infos.form["extra_param"] == "foobar"
+    assert infos.form["default"] == "hello"
 
 
 @mark.asyncio(loop_scope="module")

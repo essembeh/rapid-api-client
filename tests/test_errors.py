@@ -1,6 +1,8 @@
+from typing import Annotated
+
 from pytest import mark, raises
 
-from rapid_api_client import RapidApi, get
+from rapid_api_client import Header, RapidApi, get
 
 
 @mark.asyncio(loop_scope="module")
@@ -20,6 +22,17 @@ async def test_bad_constructor(client):
     class HttpBinApi:
         @get("/anything")
         def test(self): ...
+
+    api = HttpBinApi()
+    with raises(ValueError):
+        await api.test()
+
+
+@mark.asyncio(loop_scope="module")
+async def test_missing_parameter(client):
+    class HttpBinApi(RapidApi):
+        @get("/anything")
+        def test(self, header: Annotated[str, Header()]): ...
 
     api = HttpBinApi()
     with raises(ValueError):
