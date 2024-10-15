@@ -59,15 +59,21 @@ async def test_header_default2(client):
 async def test_header_none(client):
     class HttpBinApi(RapidApi):
         @get("/anything", response_class=Infos)
-        def test(self, myheader: Annotated[str | None, Header(default=None)]): ...
+        def test(
+            self,
+            myheader: Annotated[str | None, Header(default=None)],
+            myheader2: Annotated[str | None, Header()] = None,
+        ): ...
 
     api = HttpBinApi(client)
 
-    infos = await api.test("foo")
-    assert "Myheader" in infos.headers
+    infos = await api.test("foo", "bar")
+    assert infos.headers["Myheader"] == "foo"
+    assert infos.headers["Myheader2"] == "bar"
 
     infos = await api.test()
     assert "Myheader" not in infos.headers
+    assert "Myheader2" not in infos.headers
 
 
 @mark.asyncio(loop_scope="module")

@@ -69,14 +69,19 @@ async def test_query_default2(client):
 async def test_query_none(client):
     class HttpBinApi(RapidApi):
         @get("/anything", response_class=Infos)
-        def test(self, myparam: Annotated[str | None, Query(default=None)]): ...
+        def test(
+            self,
+            myparam: Annotated[str | None, Query(default=None)],
+            myparam2: Annotated[str | None, Query()] = None,
+        ): ...
 
     api = HttpBinApi(client)
 
-    infos = await api.test("foo")
+    infos = await api.test("foo", "bar")
     query_params = dict(infos.url.query_params())
-    assert len(query_params) == 1
+    assert len(query_params) == 2
     assert query_params["myparam"] == "foo"
+    assert query_params["myparam2"] == "bar"
 
     infos = await api.test()
     query_params = dict(infos.url.query_params())

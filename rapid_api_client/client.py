@@ -58,8 +58,10 @@ class RapidParameter(Generic[BA]):
         return self.name
 
     def get_value(self, ba: BoundArguments, *, validate: bool = True) -> Any:
-        out = ba.arguments.get(self.name)
-        if out is None:
+        out = None
+        if self.name in ba.arguments:
+            out = ba.arguments.get(self.name)
+        else:
             # check if pydantic model has a default value or a default factory
             if self.annot.default is not PydanticUndefined:
                 out = self.annot.default
