@@ -55,7 +55,7 @@ class PydanticBody(Body):
     """
 
 
-class PydanticXmlBody(Body):
+class PydanticXmlBody(PydanticBody):
     """
     Annotation to declare an argument to be serialized to xml and used as http content
     """

@@ -1,7 +1,7 @@
 from typing import Annotated, Dict
 
 from pydantic import BaseModel
-from pytest import mark
+from pytest import mark, raises
 
 from rapid_api_client import Body, FileBody, FormBody, PydanticBody, RapidApi, post
 
@@ -80,3 +80,26 @@ async def test_body_files(client):
     assert len(infos.files) == 2
     assert infos.files["file1"] == "content1"
     assert infos.files["file2_alt"] == "content2"
+
+
+@mark.asyncio(loop_scope="module")
+async def test_body_mixed(client):
+    with raises(AssertionError):
+
+        class HttpBinApi1(RapidApi):
+            @post("/anything", response_class=Infos)
+            def test(
+                self,
+                param1: Annotated[str, FileBody()],
+                param2: Annotated[str, FormBody()],
+            ): ...
+
+    with raises(AssertionError):
+
+        class HttpBinApi2(RapidApi):
+            @post("/anything", response_class=Infos)
+            def test(
+                self,
+                param1: Annotated[str, Body()],
+                param2: Annotated[str, Body()],
+            ): ...

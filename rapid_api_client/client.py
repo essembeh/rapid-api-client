@@ -104,6 +104,24 @@ class RapidParameters:
                 out.header_parameters.append(RapidParameter(parameter, annot))
             if (annot := find_annotation(parameter, Body)) is not None:
                 out.body_parameters.append(RapidParameter(parameter, annot))
+
+        # consistency check for body parameters
+        if len(out.body_parameters) > 0:
+            first_body_param = out.body_parameters[0]
+            if isinstance(first_body_param.annot, FileBody):
+                # FileBody: check 1+ parameters of type FileBody
+                assert all(
+                    map(lambda p: isinstance(p.annot, FileBody), out.body_parameters)
+                ), "All body parameters must be of type FileBody"
+            elif isinstance(first_body_param.annot, FormBody):
+                # FormBody: check 1+ parameters of type FormBody
+                assert all(
+                    map(lambda p: isinstance(p.annot, FormBody), out.body_parameters)
+                ), "All body parameters must be of type FormBody"
+            elif isinstance(first_body_param.annot, Body):
+                # Body: check 1 parameter of type Body
+                assert len(out.body_parameters) == 1, "Only one Body allowed"
+
         return out
 
     def get_resolved_path(self, path: str, ba: BoundArguments) -> str:
@@ -121,6 +139,57 @@ class RapidParameters:
         return filter_none_values(
             {p.get_name(): p.get_value(ba) for p in self.query_parameters}
         )
+
+    def get_body(self, ba: BoundArguments) -> Tuple[str | None, Any]:
+        # check if no body parameters defined
+        if len(self.body_parameters) > 0:
+            first_body_param = self.body_parameters[0]
+
+            if isinstance(first_body_param.annot, FileBody):
+                # there are one or more files
+                values = filter_none_values(
+                    {p.get_name(): p.get_value(ba) for p in self.body_parameters}
+                )
+                if len(values) > 0:
+                    return "files", values
+            elif isinstance(first_body_param.annot, FormBody):
+                # there are one or more form parameters
+                values = {}
+
+                def update_values(p: RapidParameter[Body]) -> None:
+                    # FormBody parameters can be a dict or a single value
+                    if (value := p.get_value(ba)) is not None:
+                        if isinstance(value, dict):
+                            # for dict, update its values
+                            values.update(value)
+                        else:
+                            # for single value, add it to the dict
+                            values[p.get_name()] = value
+
+                for param in self.body_parameters:
+                    update_values(param)
+
+                if len(values) > 0:
+                    return "data", values
+            elif isinstance(first_body_param.annot, PydanticXmlBody):
+                # there is one PydanticXmlBody parameter
+                assert (
+                    pydantic_xml is not None
+                ), "pydantic-xml must be installed to use PydanticXmlBody"
+                if (value := first_body_param.get_value(ba)) is not None:
+                    assert isinstance(value, pydantic_xml.BaseXmlModel)
+                    return "content", value.to_xml()
+            elif isinstance(first_body_param.annot, PydanticBody):
+                # there is one PydanticBody parameter
+                if (value := first_body_param.get_value(ba)) is not None:
+                    assert isinstance(value, BaseModel)
+                    return "content", value.model_dump_json()
+            else:
+                # there is one content parameter
+                if (value := first_body_param.get_value(ba)) is not None:
+                    return "content", value
+
+        return (None, None)
 
 
 @dataclass
@@ -158,28 +227,9 @@ class RapidApi:
             "headers": rapid_parameters.get_headers(ba),
             "params": rapid_parameters.get_query(ba),
         }
-        for rparam in rapid_parameters.body_parameters:
-            if (value := rparam.get_value(ba)) is not None:
-                if isinstance(rparam.annot, FileBody):
-                    files = build_kwargs.setdefault("files", {})
-                    files[rparam.get_name()] = value
-                elif isinstance(rparam.annot, FormBody):
-                    data = build_kwargs.setdefault("data", {})
-                    if isinstance(value, dict):
-                        data.update(value)
-                    else:
-                        data[rparam.get_name()] = value
-                elif isinstance(rparam.annot, PydanticBody):
-                    assert isinstance(value, BaseModel)
-                    build_kwargs["content"] = value.model_dump_json()
-                elif isinstance(rparam.annot, PydanticXmlBody):
-                    assert (
-                        pydantic_xml is not None
-                    ), "pydantic-xml must be installed to use PydanticXmlBody"
-                    assert isinstance(value, pydantic_xml.BaseXmlModel)
-                    build_kwargs["content"] = value.to_xml()
-                else:
-                    build_kwargs["content"] = value
+        post_kw, post_data = rapid_parameters.get_body(ba)
+        if post_kw is not None:
+            build_kwargs[post_kw] = post_data
 
         # handle extra optional kwargs
         if timeout is not None:
