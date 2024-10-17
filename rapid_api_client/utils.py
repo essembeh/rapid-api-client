@@ -3,11 +3,9 @@ Utility methods
 """
 
 from inspect import Parameter
-from typing import Any, Dict, Type, TypeVar, get_args
+from typing import Any, Dict, Type, get_args
 
-from .annotations import BaseAnnotation
-
-BA = TypeVar("BA", bound=BaseAnnotation)
+from .typing import BA
 
 
 def filter_none_values(values: Dict[str, Any | None]) -> Dict[str, Any]:

@@ -13,11 +13,12 @@ from .annotations import PydanticBody as PydanticBody
 from .annotations import PydanticXmlBody as PydanticXmlBody
 from .annotations import Query as Query
 from .client import RapidApi as RapidApi
-from .decorator import delete as delete
-from .decorator import get as get
-from .decorator import http as http
-from .decorator import patch as patch
-from .decorator import post as post
-from .decorator import put as put
+from .client import SyncRapidApi as SyncRapidApi
+from .sync import delete as delete
+from .sync import get as get
+from .sync import http as http
+from .sync import patch as patch
+from .sync import post as post
+from .sync import put as put
 
 __version__ = version(__name__)

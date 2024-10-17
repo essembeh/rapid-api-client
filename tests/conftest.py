@@ -1,7 +1,7 @@
 from typing import Any, Dict
 
 import pytest
-from httpx import AsyncClient, AsyncHTTPTransport
+from httpx import AsyncClient, AsyncHTTPTransport, Client, HTTPTransport
 from pydantic import BaseModel, HttpUrl, IPvAnyAddress
 
 
@@ -17,7 +17,12 @@ class Infos(BaseModel):
 
 
 @pytest.fixture(scope="module")
-def client() -> AsyncClient:
+def async_client() -> AsyncClient:
     return AsyncClient(
         base_url="https://httpbin.org", transport=AsyncHTTPTransport(retries=5)
     )
+
+
+@pytest.fixture(scope="module")
+def sync_client() -> Client:
+    return Client(base_url="https://httpbin.org", transport=HTTPTransport(retries=5))

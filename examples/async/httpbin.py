@@ -4,16 +4,8 @@ from typing import Annotated, Any, Dict
 from httpx import AsyncClient
 from pydantic import BaseModel, HttpUrl, IPvAnyAddress
 
-from rapid_api_client import (
-    FormBody,
-    Header,
-    Path,
-    PydanticBody,
-    Query,
-    RapidApi,
-    get,
-    post,
-)
+from rapid_api_client import FormBody, Header, Path, PydanticBody, Query
+from rapid_api_client.async_ import RapidApi, get, post
 
 
 class Infos(BaseModel):

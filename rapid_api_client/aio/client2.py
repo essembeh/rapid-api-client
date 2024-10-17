@@ -10,12 +10,16 @@ from typing import (
     Generic,
     List,
     Mapping,
+    ParamSpec,
     Self,
     Tuple,
     Type,
+    TypeVar,
+    overload,
 )
 
-from httpx import Client, Request, Response
+from httpx import AsyncClient, Client, Request, Response
+from httpx._client import BaseClient
 from pydantic import BaseModel, TypeAdapter
 from pydantic_core import PydanticUndefined
 
@@ -35,8 +39,13 @@ from .annotations import (
     PydanticXmlBody,
     Query,
 )
-from .typing import BA, BM, CLIENT, T
 from .utils import filter_none_values, find_annotation
+
+T = TypeVar("T")
+BM = TypeVar("BM", bound=BaseModel)
+BA = TypeVar("BA", bound=BaseAnnotation)
+PARAMS = ParamSpec("PARAMS")
+RET = TypeVar("RET")
 
 
 @dataclass
@@ -188,14 +197,20 @@ class RapidParameters:
         return (None, None)
 
 
+BC = TypeVar("BC", bound=BaseClient)
+
+
 @dataclass
-class RapidApi(Generic[CLIENT]):
+class RapidApiBase(Generic[BC]):
     """
     Represent an API, a RapidApi subclass should have methods decorated with @http
     which are endpoints
     """
 
-    client: CLIENT
+    client: BC  # TODO: default factory
+
+    def is_async_client(self) -> bool:
+        return isinstance(self.client, AsyncClient)
 
     def _build_request(
         self,
@@ -233,10 +248,23 @@ class RapidApi(Generic[CLIENT]):
 
         return self.client.build_request(method, path, **build_kwargs)
 
-    def _handle_response(
+    @overload
+    def _response(
+        self, response: Response, response_class: Type[Response]
+    ) -> Response: ...
+    @overload
+    def _response(self, response: Response, response_class: Type[str]) -> str: ...
+    @overload
+    def _response(self, response: Response, response_class: Type[bytes]) -> bytes: ...
+    @overload
+    def _response(self, response: Response, response_class: Type[BM]) -> BM: ...
+    @overload
+    def _response(self, response: Response, response_class: TypeAdapter[T]) -> T: ...
+
+    def _response(
         self,
         response: Response,
-        response_class: Type[Response | str | bytes | BM] | TypeAdapter[T] = Response,
+        response_class: Type[Response | str | bytes | BM] | TypeAdapter[T],
     ) -> Response | str | bytes | BM | T:
         """
         Parse the response given the expected class
@@ -261,6 +289,7 @@ class RapidApi(Generic[CLIENT]):
         raise ValueError(f"Response class not supported: {response_class}")
 
 
-@dataclass
-class SyncRapidApi(RapidApi[Client]):
-    client: Client = field(default_factory=Client)
+class RapidApi(RapidApiBase[AsyncClient]): ...
+
+
+class SyncRapidApi(RapidApiBase[Client]): ...
