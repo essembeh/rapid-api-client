@@ -2,30 +2,31 @@ from typing import Annotated
 
 from pytest import mark
 
-from rapid_api_client import Path, RapidApi, get
+from rapid_api_client import Path, RapidApi
+from rapid_api_client.async_ import get
 
 from .conftest import Infos
 
 
 @mark.asyncio(loop_scope="module")
-async def test_path(client):
+async def test_path(async_client):
     class HttpBinApi(RapidApi):
         @get("/anything/{myparam}", response_class=Infos)
-        def test(self, myparam: Annotated[str, Path()]): ...
+        async def test(self, myparam: Annotated[str, Path()]): ...
 
-    api = HttpBinApi(client)
+    api = HttpBinApi(async_client)
 
     infos = await api.test("foo")
     assert infos.url.path == "/anything/foo"
 
 
 @mark.asyncio(loop_scope="module")
-async def test_path_default(client):
+async def test_path_default(async_client):
     class HttpBinApi(RapidApi):
         @get("/anything/{myparam}", response_class=Infos)
-        def test(self, myparam: Annotated[str, Path()] = "bar"): ...
+        async def test(self, myparam: Annotated[str, Path()] = "bar"): ...
 
-    api = HttpBinApi(client)
+    api = HttpBinApi(async_client)
 
     infos = await api.test("foo")
     assert infos.url.path == "/anything/foo"

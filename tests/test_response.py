@@ -4,18 +4,19 @@ from httpx import HTTPError, Response
 from pydantic import TypeAdapter
 from pytest import mark, raises
 
-from rapid_api_client import RapidApi, get
+from rapid_api_client import RapidApi
+from rapid_api_client.async_ import get
 
 from .conftest import Infos
 
 
 @mark.asyncio(loop_scope="module")
-async def test_response_raw(client):
+async def test_response_raw(async_client):
     class HttpBinApi(RapidApi):
         @get("/anything")
         def test(self): ...
 
-    api = HttpBinApi(client)
+    api = HttpBinApi(async_client)
 
     resp = await api.test()
     assert isinstance(resp, Response)
@@ -23,12 +24,12 @@ async def test_response_raw(client):
 
 
 @mark.asyncio(loop_scope="module")
-async def test_response_model(client):
+async def test_response_model(async_client):
     class HttpBinApi(RapidApi):
         @get("/anything", response_class=Infos)
         def test(self): ...
 
-    api = HttpBinApi(client)
+    api = HttpBinApi(async_client)
 
     resp = await api.test()
     assert str(resp.url) == "https://httpbin.org/anything"
@@ -37,12 +38,12 @@ async def test_response_model(client):
 
 
 @mark.asyncio(loop_scope="module")
-async def test_response_str(client):
+async def test_response_str(async_client):
     class HttpBinApi(RapidApi):
         @get("/anything", response_class=str)
         def test(self): ...
 
-    api = HttpBinApi(client)
+    api = HttpBinApi(async_client)
 
     resp = await api.test()
     assert resp.startswith("{")
@@ -50,19 +51,19 @@ async def test_response_str(client):
 
 
 @mark.asyncio(loop_scope="module")
-async def test_response_bytes(client):
+async def test_response_bytes(async_client):
     class HttpBinApi(RapidApi):
         @get("/anything", response_class=bytes)
         def test(self): ...
 
-    api = HttpBinApi(client)
+    api = HttpBinApi(async_client)
 
     resp = await api.test()
     assert isinstance(resp, bytes)
 
 
 @mark.asyncio(loop_scope="module")
-async def test_response_typeadapter(client):
+async def test_response_typeadapter(async_client):
     @dataclass
     class Infos2:
         url: str
@@ -72,7 +73,7 @@ async def test_response_typeadapter(client):
         @get("/anything", response_class=TypeAdapter(Infos2))
         def test(self): ...
 
-    api = HttpBinApi(client)
+    api = HttpBinApi(async_client)
 
     resp = await api.test()
     assert resp.url == "https://httpbin.org/anything"
@@ -81,12 +82,12 @@ async def test_response_typeadapter(client):
 
 
 @mark.asyncio(loop_scope="module")
-async def test_response_error(client):
+async def test_response_error(async_client):
     class HttpBinApi(RapidApi):
         @get("/status/500")
         def test(self): ...
 
-    api = HttpBinApi(client)
+    api = HttpBinApi(async_client)
 
     resp = await api.test()
     assert isinstance(resp, Response)
@@ -94,12 +95,12 @@ async def test_response_error(client):
 
 
 @mark.asyncio(loop_scope="module")
-async def test_response_error_raise(client):
+async def test_response_error_raise(async_client):
     class HttpBinApi(RapidApi):
         @get("/status/500", response_class=Infos)
         def test(self): ...
 
-    api = HttpBinApi(client)
+    api = HttpBinApi(async_client)
 
     with raises(HTTPError):
         await api.test()

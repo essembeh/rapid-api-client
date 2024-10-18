@@ -13,10 +13,9 @@ from typing import (
     Self,
     Tuple,
     Type,
-    TypeVar,
 )
 
-from httpx import AsyncClient, Request, Response
+from httpx import Client, Request, Response
 from pydantic import BaseModel, TypeAdapter
 from pydantic_core import PydanticUndefined
 
@@ -36,11 +35,8 @@ from .annotations import (
     PydanticXmlBody,
     Query,
 )
+from .typing import BA, BM, CLIENT, T
 from .utils import filter_none_values, find_annotation
-
-BM = TypeVar("BM", bound=BaseModel)
-T = TypeVar("T")
-BA = TypeVar("BA", bound=BaseAnnotation)
 
 
 @dataclass
@@ -193,13 +189,13 @@ class RapidParameters:
 
 
 @dataclass
-class RapidApi:
+class RapidApi(Generic[CLIENT]):
     """
     Represent an API, a RapidApi subclass should have methods decorated with @http
     which are endpoints
     """
 
-    client: AsyncClient = field(default_factory=AsyncClient)
+    client: CLIENT
 
     def _build_request(
         self,
@@ -263,3 +259,8 @@ class RapidApi:
         if issubclass(response_class, BaseModel):
             return response_class.model_validate_json(response.content)
         raise ValueError(f"Response class not supported: {response_class}")
+
+
+@dataclass
+class SyncRapidApi(RapidApi[Client]):
+    client: Client = field(default_factory=Client)

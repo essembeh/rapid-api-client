@@ -2,18 +2,19 @@ from typing import Annotated
 
 from pytest import mark
 
-from rapid_api_client import Query, RapidApi, get
+from rapid_api_client import Query, RapidApi
+from rapid_api_client.async_ import get
 
 from .conftest import Infos
 
 
 @mark.asyncio(loop_scope="module")
-async def test_query(client):
+async def test_query(async_client):
     class HttpBinApi(RapidApi):
         @get("/anything", response_class=Infos)
         def test(self, myparam: Annotated[str, Query()]): ...
 
-    api = HttpBinApi(client)
+    api = HttpBinApi(async_client)
 
     infos = await api.test("foo")
     query_params = dict(infos.url.query_params())
@@ -22,7 +23,7 @@ async def test_query(client):
 
 
 @mark.asyncio(loop_scope="module")
-async def test_query_default(client):
+async def test_query_default(async_client):
     class HttpBinApi(RapidApi):
         @get("/anything", response_class=Infos)
         def test(
@@ -31,7 +32,7 @@ async def test_query_default(client):
             otherparam: Annotated[str, Query(default_factory=lambda: "BAR")],
         ): ...
 
-    api = HttpBinApi(client)
+    api = HttpBinApi(async_client)
 
     infos = await api.test("foo", "FOO")
     query_params = dict(infos.url.query_params())
@@ -47,12 +48,12 @@ async def test_query_default(client):
 
 
 @mark.asyncio(loop_scope="module")
-async def test_query_default2(client):
+async def test_query_default2(async_client):
     class HttpBinApi(RapidApi):
         @get("/anything", response_class=Infos)
         def test(self, myparam: Annotated[str, Query()] = "bar"): ...
 
-    api = HttpBinApi(client)
+    api = HttpBinApi(async_client)
 
     infos = await api.test("foo")
     query_params = dict(infos.url.query_params())
@@ -66,7 +67,7 @@ async def test_query_default2(client):
 
 
 @mark.asyncio(loop_scope="module")
-async def test_query_none(client):
+async def test_query_none(async_client):
     class HttpBinApi(RapidApi):
         @get("/anything", response_class=Infos)
         def test(
@@ -75,7 +76,7 @@ async def test_query_none(client):
             myparam2: Annotated[str | None, Query()] = None,
         ): ...
 
-    api = HttpBinApi(client)
+    api = HttpBinApi(async_client)
 
     infos = await api.test("foo", "bar")
     query_params = dict(infos.url.query_params())
@@ -89,12 +90,12 @@ async def test_query_none(client):
 
 
 @mark.asyncio(loop_scope="module")
-async def test_query_alias(client):
+async def test_query_alias(async_client):
     class HttpBinApi(RapidApi):
         @get("/anything", response_class=Infos)
         def test(self, myparam: Annotated[str, Query(alias="otherparam")]): ...
 
-    api = HttpBinApi(client)
+    api = HttpBinApi(async_client)
 
     infos = await api.test("foo")
     query_params = dict(infos.url.query_params())

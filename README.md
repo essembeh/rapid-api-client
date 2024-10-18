@@ -3,6 +3,10 @@
 ![Python](https://img.shields.io/pypi/pyversions/rapid-api-client.svg)
 ![CI](https://github.com/essembeh/python-helloworld/actions/workflows/poetry.yml/badge.svg)
 
+> 🙏 As a Python Backend developer, I've wasted so much time in recent years writing the same API clients over and over using [Requests](https://requests.readthedocs.io/) or [HTTPX](https://www.python-httpx.org/); At the same time, I could be so efficient by using [FastAPI](https://fastapi.tiangolo.com/) for API servers; I just wanted to save time for my upcoming projects, thinking that other developers might find it useful too.
+
+
+
 
 # Rapid Api Client
 
@@ -13,15 +17,13 @@ Library to **rapidly** develop *API clients* in Python, based on [Pydantic](http
 - 🪄 Pydantic validation for `Header`, `Query`, `Path` or `Body` parameters.
 - 📤 Support Pydantic to parse and validate reponses content so your method returns a model object if the response is OK.
 - 📥 Also support Pydantic serialization for `Body` with `POST`-like opeations.
-- 🏗️ Does not reimplement the low-level http related logic, it simply relies on `httpx.AsyncClient` like you would do and you can customize it.
-- ⚡️ Asynchronous, because `httpx` and `asyncio` are just amazingly fast.
-
-🙏 As a Python Backend developer, I've wasted so much time in recent years writing the same API clients over and over using `requests` or `httpx`; At the same time, I could be so efficient by using [FastAPI](https://fastapi.tiangolo.com/); I just wanted to save time for my upcoming projects, thinking that other developers might find it useful too.
+- 🏗️ Does not reimplement any low-level http related logic (like auth, transport ...), it simply uses `httpx.Client` like you are used to, *decorators* simply build the `httpx.Request` for you.
+- ⚡️ Support `async` operations, because `httpx` and `asyncio` are just amazingly fast.
 
 
 # Usage 
 
-Install the project
+Install the library
 
 ```sh
 pip install rapid-api-client
@@ -33,18 +35,20 @@ Declare your API endpoints using decorators and annotations, **the method does n
 class GithubIssuesApi(RapidApi):
 
     @get("/repos/{owner}/{repo}/issues", response_class=TypeAdapter(List[Issue]))
-    async def list_issues(self, owner: Annotated[str, Path()], repo: Annotated[str, Path()]): ...
+    def list_issues(self, owner: Annotated[str, Path()], repo: Annotated[str, Path()]): ...
 
     @get("/repos/{owner}/{repo}/releases", response_class=TypeAdapter(List[Release]))
-    async def list_releases(self, owner: Annotated[str, Path()], repo: Annotated[str, Path()]): ...
+    def list_releases(self, owner: Annotated[str, Path()], repo: Annotated[str, Path()]): ...
 
 ```
 
 Use it 
 
 ```python
-    api = GithubIssuesApi(client)
-    issues = await api.list_issues("essembeh", "rapid-api-client", state="closed")
+    from httpx import Client
+
+    api = GithubIssuesApi(Client(base_url="https://api.github.com"))
+    issues = api.list_issues("essembeh", "rapid-api-client", state="closed")
     for issue in issues:
         print(f"Issue: {issue.title} [{issue.url}]")
 ```
@@ -56,22 +60,67 @@ Use it
 Any HTTP method can be used with `http` decorator
 
 ```python
-class MyApi(RapidApi)
+from rapid_api_client import RapidApi, http 
+
+
+class MyApi(RapidApi):
 
     @http("GET", "/anything")
-    async def get(self): ...
+    def get(self): ...
 
     @http("POST", "/anything")
-    async def post(self): ...
+    def post(self): ...
 
     @http("DELETE", "/anything")
-    async def delete(self): ...
+    def delete(self): ...
 ```
 
 Convenient decorators are available like `get`, `post`, `delete`, `put`, `patch`
 
 ```python
-class MyApi(RapidApi)
+from rapid_api_client import RapidApi, get, post, delete
+
+class MyApi(RapidApi):
+
+    @get("/anything")
+    def get(self): ...
+
+    @post("/anything")
+    def post(self): ...
+
+    @delete("/anything")
+    def delete(self): ...
+```
+
+To use you API, you just need to instanciate it with a `httpx.Client` like:
+
+```python
+from httpx import Client
+
+api = MyApi(Client(base_url="https://httpbin.org"))
+resp = api.get()
+resp.raise_for_status()
+```
+
+
+## `async` support
+
+> Since version `0.5.0`, the default *client* and *annotations* are synchronous, `async` decorators and clients are in `rapid_api_client.async_` package.
+
+RapidApiClient support both `sync` and `async` methods, based on `httpx.Client` and `httpx.AsyncClient`.
+
+To build an asynchronous client:
+* use common `RapidApi` class with an `AsyncClient` or use `AsyncRapidApi` class
+* use annotations like `get` or `post` from `rapid_api_client.async_` package
+
+Example:
+
+```python
+from rapid_api_client import RapidApi
+from rapid_api_client.async_ import get, post, delete
+from httpx import AsyncClient
+
+class MyApi(RapidApi):
 
     @get("/anything")
     async def get(self): ...
@@ -81,6 +130,31 @@ class MyApi(RapidApi)
 
     @delete("/anything")
     async def delete(self): ...
+
+# Usage
+api = MyApi(AsyncClient(base_url="https://httpbin.org"))
+resp = await api.get()
+```
+
+You can also use the dedicated `AsyncRapidApi` class which provides a default factory for an `AsyncClient`:
+
+```python
+from rapid_api_client.async_ import get, post, delete, AsyncRapidApi
+
+class MyApi(AsyncRapidApi):
+
+    @get("https://httpbin.org/anything")
+    async def get(self): ...
+
+    @post("https://httpbin.org/anything")
+    async def post(self): ...
+
+    @delete("https://httpbin.org/anything")
+    async def delete(self): ...
+
+# Usage
+api = MyApi()
+resp = await api.get()
 ```
 
 
@@ -101,15 +175,15 @@ But you can also specify a class so that the response is parsed, you can use:
 ```python
 class User(BaseModel): ...
 
-class MyApi(RapidApi)
+class MyApi(RapidApi):
 
     # this method return a httpx.Response
     @get("/user/me")
-    async def get_user_raw(self): ...
+    def get_user_raw(self): ...
 
     # this method returns a User class
     @get("/user/me", response_class=User)
-    async def get_user(self): ...
+    def get_user(self): ...
 ```
 
 
@@ -122,19 +196,19 @@ class MyApi(RapidApi):
 
     # Path parameter
     @get("/user/{user_id}")
-    async def get_user(self, user_id: Annotated[int, Path()]): ...
+    def get_user(self, user_id: Annotated[int, Path()]): ...
 
     # Path parameters with value validation
     @get("/user/{user_id}")
-    async def get_user(self, user_id: Annotated[PositiveInt, Path()]): ...
+    def get_user(self, user_id: Annotated[PositiveInt, Path()]): ...
 
     # Path parameters with a default value
     @get("/user/{user_id}")
-    async def get_user(self, user_id: Annotated[int, Path(default=1)]): ...
+    def get_user(self, user_id: Annotated[int, Path(default=1)]): ...
 
     # Path parameters with a default value using a factory
     @get("/user/{user_id}")
-    async def get_user(self, user_id: Annotated[int, Path(default_factory=lambda: 42)]): ...
+    def get_user(self, user_id: Annotated[int, Path(default_factory=lambda: 42)]): ...
 
 ```
 
@@ -147,23 +221,23 @@ class MyApi(RapidApi):
 
     # Query parameter
     @get("/issues")
-    async def get_issues(self, sort: Annotated[str, Query()]): ...
+    def get_issues(self, sort: Annotated[str, Query()]): ...
 
     # Query parameters with value validation
     @get("/issues")
-    async def get_issues(self, sort: Annotated[Literal["updated", "id"], Query()]): ...
+    def get_issues(self, sort: Annotated[Literal["updated", "id"], Query()]): ...
 
     # Query parameter with a default value
     @get("/issues")
-    async def get_issues(self, sort: Annotated[str, Query(default="updated")]): ...
+    def get_issues(self, sort: Annotated[str, Query(default="updated")]): ...
 
     # Query parameter with a default value using a factory
     @get("/issues")
-    async def get_issues(self, sort: Annotated[str, Query(default_factory=lambda: "updated")]): ...
+    def get_issues(self, sort: Annotated[str, Query(default_factory=lambda: "updated")]): ...
 
     # Query parameter with a default value
     @get("/issues")
-    async def get_issues(self, my_parameter: Annotated[str, Query(alias="sort")]): ...
+    def get_issues(self, my_parameter: Annotated[str, Query(alias="sort")]): ...
 ```
 
 
@@ -176,23 +250,23 @@ class MyApi(RapidApi):
 
     # Header parameter
     @get("/issues")
-    async def get_issues(self, x_version: Annotated[str, Header()]): ...
+    def get_issues(self, x_version: Annotated[str, Header()]): ...
 
     # Header parameters with value validation
     @get("/issues")
-    async def get_issues(self, x_version: Annotated[Literal["2024.06", "2024.01"], Header()]): ...
+    def get_issues(self, x_version: Annotated[Literal["2024.06", "2024.01"], Header()]): ...
 
     # Header parameter with a default value
     @get("/issues")
-    async def get_issues(self, x_version: Annotated[str, Header(default="2024.06")]): ...
+    def get_issues(self, x_version: Annotated[str, Header(default="2024.06")]): ...
 
     # Header parameter with a default value using a factory
     @get("/issues")
-    async def get_issues(self, x_version: Annotated[str, Header(default_factory=lambda: "2024.06")]): ...
+    def get_issues(self, x_version: Annotated[str, Header(default_factory=lambda: "2024.06")]): ...
 
     # Header parameter with a default value
     @get("/issues")
-    async def get_issues(self, my_parameter: Annotated[str, Header(alias="x-version")]): ...
+    def get_issues(self, my_parameter: Annotated[str, Header(alias="x-version")]): ...
 ```
 
 ## Body parameter
@@ -209,15 +283,15 @@ class MyApi(RapidApi):
 
     # send a string in request content
     @post("/string")
-    async def post_string(self, body: Annotated[str, Body()]): ...
+    def post_string(self, body: Annotated[str, Body()]): ...
 
     # send a string in request content
     @post("/model")
-    async def post_model(self, body: Annotated[MyPydanticClass, PydanticBody()]): ...
+    def post_model(self, body: Annotated[MyPydanticClass, PydanticBody()]): ...
 
     # send a multiple files
     @post("/files")
-    async def post_files(self, report: Annotated[bytes, FileBody()], image: Annotated[bytes, FileBody()]): ...
+    def post_files(self, report: Annotated[bytes, FileBody()], image: Annotated[bytes, FileBody()]): ...
 
     # send a form
     @post("/form")
@@ -236,11 +310,11 @@ class MyApi(RapidApi):
 
     # parse response xml content
     @get("/get", response_class=ResponseXmlRootModel)
-    async def get_xml(self): ...
+    def get_xml(self): ...
 
     # serialize xml model automatically
     @post("/post")
-    async def post_xml(self, body: Annotated[ResponseXmlRootModel, PydanticXmlBody()]): ...
+    def post_xml(self, body: Annotated[ResponseXmlRootModel, PydanticXmlBody()]): ...
 
  ```
 
