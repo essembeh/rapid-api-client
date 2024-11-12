@@ -7,7 +7,7 @@ from pytest import mark, raises
 from rapid_api_client import RapidApi
 from rapid_api_client.async_ import get
 
-from .conftest import Infos
+from .conftest import HTTPBIN_URL, Infos
 
 
 @mark.asyncio(loop_scope="module")
@@ -32,7 +32,7 @@ async def test_response_model(async_client):
     api = HttpBinApi(async_client)
 
     resp = await api.test()
-    assert str(resp.url) == "https://httpbin.org/anything"
+    assert str(resp.url) == f"{HTTPBIN_URL}/anything"
     assert resp.method == "GET"
     assert isinstance(resp, Infos)
 
@@ -76,7 +76,7 @@ async def test_response_typeadapter(async_client):
     api = HttpBinApi(async_client)
 
     resp = await api.test()
-    assert resp.url == "https://httpbin.org/anything"
+    assert resp.url == f"{HTTPBIN_URL}/anything"
     assert resp.method == "GET"
     assert isinstance(resp, Infos2)
 

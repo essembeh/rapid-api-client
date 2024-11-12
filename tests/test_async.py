@@ -5,7 +5,7 @@ from pytest import mark
 from rapid_api_client import RapidApi
 from rapid_api_client.async_ import AsyncRapidApi, get
 
-from .conftest import Infos
+from .conftest import HTTPBIN_URL, Infos
 
 
 class HttpBinApi(RapidApi):
@@ -41,7 +41,7 @@ async def test_gather(async_client):
 @mark.asyncio(loop_scope="module")
 async def test_default_client():
     class MyHttpBinApi(AsyncRapidApi):
-        @get("https://httpbin.org/anything", response_class=Infos)
+        @get(f"{HTTPBIN_URL}/anything", response_class=Infos)
         async def get(self): ...
 
     api = MyHttpBinApi()

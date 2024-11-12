@@ -5,7 +5,7 @@ from pytest import mark, raises
 
 from rapid_api_client import Header, Path, Query, RapidApi
 from rapid_api_client.async_ import get
-from tests.conftest import Infos
+from tests.conftest import HTTPBIN_URL, Infos
 
 
 @mark.asyncio(loop_scope="module")
@@ -17,7 +17,7 @@ async def test_validation_path_fieldinfo(async_client):
     api = MyApi(async_client)
 
     resp = await api.test("foo")
-    assert str(resp.url) == "https://httpbin.org/anything/foo"
+    assert str(resp.url) == f"{HTTPBIN_URL}/anything/foo"
 
     with raises(ValidationError):
         await api.test("FOO")
@@ -32,7 +32,7 @@ async def test_validation_path_annotation(async_client):
     api = MyApi(async_client)
 
     resp = await api.test("foo")
-    assert str(resp.url) == "https://httpbin.org/anything/foo"
+    assert str(resp.url) == f"{HTTPBIN_URL}/anything/foo"
 
     with raises(ValidationError):
         await api.test("baz")
@@ -81,7 +81,7 @@ async def test_validation_header_fieldinfo(async_client):
     api = MyApi(async_client)
 
     resp = await api.test("foo")
-    assert resp.headers["Param"] == "foo"
+    assert resp.headers["Param"] == ["foo"]
 
     with raises(ValidationError):
         await api.test("FOO")
@@ -96,7 +96,7 @@ async def test_validation_header_annotation(async_client):
     api = MyApi(async_client)
 
     resp = await api.test("foo")
-    assert resp.headers["Param"] == "foo"
+    assert resp.headers["Param"] == ["foo"]
 
     with raises(ValidationError):
         await api.test("baz")

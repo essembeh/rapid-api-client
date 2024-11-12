@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from pytest import mark, raises
 
 from rapid_api_client import Body, FileBody, FormBody, PydanticBody, RapidApi
-from rapid_api_client.annotations import JsonBody
+from rapid_api_client.annotations import Header, JsonBody
 from rapid_api_client.async_ import post
 
 from .conftest import Infos
@@ -14,7 +14,13 @@ from .conftest import Infos
 async def test_body_str(async_client):
     class HttpBinApi(RapidApi):
         @post("/anything", response_class=Infos)
-        async def test(self, body: Annotated[str, Body()]): ...
+        async def test(
+            self,
+            body: Annotated[str, Body()],
+            content_type: Annotated[
+                str, Header(alias="content-type", default="text/plain")
+            ],
+        ): ...
 
     api = HttpBinApi(async_client)
 
@@ -25,9 +31,14 @@ async def test_body_str(async_client):
 @mark.asyncio(loop_scope="module")
 async def test_body_json(async_client):
     class HttpBinApi(RapidApi):
-        # @post("/anything")
         @post("/anything", response_class=Infos)
-        async def test(self, body: Annotated[Dict, JsonBody()]): ...
+        async def test(
+            self,
+            body: Annotated[Dict, JsonBody()],
+            content_type: Annotated[
+                str, Header(alias="content-type", default="application/json")
+            ],
+        ): ...
 
     api = HttpBinApi(async_client)
 
@@ -57,10 +68,10 @@ async def test_body_form(async_client):
     user = {"name": "John Doe", "age": 42}
     infos = await api.test(user, "foobar")
     assert len(infos.form) == 4
-    assert infos.form["name"] == "John Doe"
-    assert infos.form["age"] == "42"
-    assert infos.form["extra_param"] == "foobar"
-    assert infos.form["default"] == "hello"
+    assert infos.form["name"] == ["John Doe"]
+    assert infos.form["age"] == ["42"]
+    assert infos.form["extra_param"] == ["foobar"]
+    assert infos.form["default"] == ["hello"]
 
 
 @mark.asyncio(loop_scope="module")
@@ -71,7 +82,13 @@ async def test_body_pydantic(async_client):
 
     class HttpBinApi(RapidApi):
         @post("/anything", response_class=Infos)
-        def test(self, body: Annotated[User, PydanticBody()]): ...
+        def test(
+            self,
+            body: Annotated[User, PydanticBody()],
+            content_type: Annotated[
+                str, Header(alias="content-type", default="application/json")
+            ],
+        ): ...
 
     api = HttpBinApi(async_client)
 
@@ -95,8 +112,8 @@ async def test_body_files(async_client):
 
     infos = await api.test("content1", "content2")
     assert len(infos.files) == 2
-    assert infos.files["file1"] == "content1"
-    assert infos.files["file2_alt"] == "content2"
+    assert infos.files["file1"] == ["content1"]
+    assert infos.files["file2_alt"] == ["content2"]
 
 
 @mark.asyncio(loop_scope="module")

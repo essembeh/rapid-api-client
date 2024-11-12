@@ -7,11 +7,11 @@ from pytest import mark
 from rapid_api_client import Path, RapidApi
 from rapid_api_client.async_ import delete, get, patch, post, put
 
-from .conftest import Infos
+from .conftest import HTTPBIN_URL, Infos
 
 
 class HttpBinApi(RapidApi):
-    @get("/delay/{delay}", response_class=Infos, timeout=3.5)
+    @get("/delay/{delay}", response_class=Infos, timeout=3)
     async def delay(self, delay: Annotated[int, Path()]): ...
 
     @get("/anything", response_class=Infos)
@@ -68,8 +68,8 @@ async def test_http_patch(async_client):
 @mark.asyncio(loop_scope="module")
 async def test_http_timeout(async_client):
     api = HttpBinApi(async_client)
-    infos = await api.delay(3)
-    assert str(infos.url) == "https://httpbin.org/delay/3"
+    infos = await api.delay(1)
+    assert str(infos.url) == f"{HTTPBIN_URL}/delay/1"
 
     with pytest.raises(ReadTimeout):
-        infos = await api.delay(4)
+        infos = await api.delay(5)

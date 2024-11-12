@@ -4,6 +4,7 @@ from pydantic_xml import BaseXmlModel, attr
 from pytest import mark
 
 from rapid_api_client import PydanticXmlBody, RapidApi
+from rapid_api_client.annotations import Header
 from rapid_api_client.async_ import get, post
 
 from .conftest import Infos
@@ -29,7 +30,13 @@ async def test_get_xml(async_client):
 async def test_post_xml(async_client):
     class HttpBinApi(RapidApi):
         @post("/anything", response_class=Infos)
-        async def test(self, xml: Annotated[XmlModel, PydanticXmlBody()]): ...
+        async def test(
+            self,
+            xml: Annotated[XmlModel, PydanticXmlBody()],
+            content_type: Annotated[
+                str, Header(alias="content-type", default="text/plain")
+            ],
+        ): ...
 
     api = HttpBinApi(async_client)
 
