@@ -35,6 +35,12 @@ class Body(BaseAnnotation):
     """
 
 
+class JsonBody(Body):
+    """
+    Annotation to declare an argument used as json objected for post/put/...
+    """
+
+
 class FormBody(Body):
     """
     Annotation to declare an argument used as url-encoded parameter

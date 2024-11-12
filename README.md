@@ -275,6 +275,7 @@ You can send a body with your request using the `Body` annotation.
 
 This body can be 
  - a *raw* object with `Body`
+ - a `dict` object with `JsonBody` 
  - a *Pydantic* object  with `PydanticBody`
  - one or more files with `FileBody`
 
@@ -285,7 +286,11 @@ class MyApi(RapidApi):
     @post("/string")
     def post_string(self, body: Annotated[str, Body()]): ...
 
-    # send a string in request content
+    # send a dict in request content as json
+    @post("/string")
+    def post_json(self, body: Annotated[dict, JsonBody()]): ...
+
+    # send a Pydantic model in serialized as json
     @post("/model")
     def post_model(self, body: Annotated[MyPydanticClass, PydanticBody()]): ...
 

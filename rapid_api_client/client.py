@@ -30,6 +30,7 @@ from .annotations import (
     FileBody,
     FormBody,
     Header,
+    JsonBody,
     Path,
     PydanticBody,
     PydanticXmlBody,
@@ -114,6 +115,9 @@ class RapidParameters:
                 assert all(
                     map(lambda p: isinstance(p.annot, FormBody), out.body_parameters)
                 ), "All body parameters must be of type FormBody"
+            elif isinstance(first_body_param.annot, JsonBody):
+                # JsonBody: check 1 parameter of type JsonBody
+                assert len(out.body_parameters) == 1, "Only one JsonBody allowed"
             elif isinstance(first_body_param.annot, Body):
                 # Body: check 1 parameter of type Body
                 assert len(out.body_parameters) == 1, "Only one Body allowed"
@@ -180,6 +184,11 @@ class RapidParameters:
                 if (value := first_body_param.get_value(ba)) is not None:
                     assert isinstance(value, BaseModel)
                     return "content", value.model_dump_json()
+            elif isinstance(first_body_param.annot, JsonBody):
+                # there is one JsonBody parameter
+                if (value := first_body_param.get_value(ba)) is not None:
+                    assert isinstance(value, dict)
+                    return "json", value
             else:
                 # there is one content parameter
                 if (value := first_body_param.get_value(ba)) is not None:

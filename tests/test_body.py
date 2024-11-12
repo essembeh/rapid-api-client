@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from pytest import mark, raises
 
 from rapid_api_client import Body, FileBody, FormBody, PydanticBody, RapidApi
+from rapid_api_client.annotations import JsonBody
 from rapid_api_client.async_ import post
 
 from .conftest import Infos
@@ -19,6 +20,21 @@ async def test_body_str(async_client):
 
     infos = await api.test("foo")
     assert infos.data == "foo"
+
+
+@mark.asyncio(loop_scope="module")
+async def test_body_json(async_client):
+    class HttpBinApi(RapidApi):
+        # @post("/anything")
+        @post("/anything", response_class=Infos)
+        async def test(self, body: Annotated[Dict, JsonBody()]): ...
+
+    api = HttpBinApi(async_client)
+
+    user = {"name": "John Doe", "age": 42}
+    infos = await api.test(user)
+    assert infos.json_data is not None
+    assert infos.json_data == user
 
 
 @mark.asyncio(loop_scope="module")

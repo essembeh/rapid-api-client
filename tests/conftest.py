@@ -2,7 +2,7 @@ from typing import Any, Dict
 
 import pytest
 from httpx import AsyncClient, AsyncHTTPTransport, Client, HTTPTransport
-from pydantic import BaseModel, HttpUrl, IPvAnyAddress
+from pydantic import BaseModel, Field, HttpUrl, IPvAnyAddress
 
 
 class Infos(BaseModel):
@@ -11,6 +11,7 @@ class Infos(BaseModel):
     files: Dict[str, str]
     form: Dict[str, str]
     headers: Dict[str, Any]
+    json_data: Dict[str, Any] | None = Field(alias="json", default=None)
     method: str | None = None
     origin: IPvAnyAddress
     url: HttpUrl
