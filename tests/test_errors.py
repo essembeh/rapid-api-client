@@ -1,40 +1,43 @@
 from typing import Annotated
 
+from httpx import Response, UnsupportedProtocol
 from pytest import mark, raises
 
-from rapid_api_client import Header, RapidApi
-from rapid_api_client.async_ import get
+from rapid_api_client import Header, RapidApi, get
+
+from .conftest import BASE_URL
 
 
 @mark.asyncio(loop_scope="module")
-async def test_response_unsupported(async_client):
+async def test_response_unsupported():
     class HttpBinApi(RapidApi):
-        @get("/anything", response_class=int)  # pyright: ignore
-        def test(self): ...
+        @get("/anything")
+        async def test(self) -> int: ...
 
-    api = HttpBinApi(async_client)
+    api = HttpBinApi(base_url=BASE_URL)
 
     with raises(ValueError):
-        await api.test()  # pyright: ignore
+        await api.test()
 
 
 @mark.asyncio(loop_scope="module")
 async def test_bad_constructor():
-    class HttpBinApi:
+    class HttpBinApi(RapidApi):
         @get("/anything")
-        def test(self): ...
+        async def test(self) -> Response: ...
 
     api = HttpBinApi()
-    with raises(AssertionError):
+
+    with raises(UnsupportedProtocol):
         await api.test()
 
 
 @mark.asyncio(loop_scope="module")
-async def test_missing_parameter(async_client):
+async def test_missing_parameter():
     class HttpBinApi(RapidApi):
         @get("/anything")
         def test(self, header: Annotated[str, Header()]): ...
 
-    api = HttpBinApi(async_client)
+    api = HttpBinApi(base_url=BASE_URL)
     with raises(ValueError):
-        await api.test()
+        await api.test()  # pyright: ignore[reportCallIssue]

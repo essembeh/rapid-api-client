@@ -1,23 +1,22 @@
-from rapid_api_client import RapidApi, SyncRapidApi, get
+from httpx import Client
 
-from .conftest import HTTPBIN_URL, Infos
+from rapid_api_client import RapidApi, get
+
+from .conftest import BASE_URL, Infos
 
 
-def test_get(sync_client):
-    class HttpBinApi(RapidApi):
-        @get("/anything", response_class=Infos)
-        def get(self): ...
+class HttpBinApi(RapidApi):
+    @get("/anything")
+    def get(self) -> Infos: ...
 
-    api = HttpBinApi(sync_client)
+
+def test_client():
+    api = HttpBinApi(client=Client(base_url=BASE_URL))
     infos = api.get()
     assert infos.method == "GET"
 
 
 def test_default_client():
-    class HttpBinApi(SyncRapidApi):
-        @get(f"{HTTPBIN_URL}/anything", response_class=Infos)
-        def get(self): ...
-
-    api = HttpBinApi()
-    resp = api.get()
-    assert resp.method == "GET"
+    api = HttpBinApi(base_url=BASE_URL)
+    infos = api.get()
+    assert infos.method == "GET"

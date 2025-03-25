@@ -1,75 +1,85 @@
 from typing import Annotated
 
-import pytest
-from httpx import ReadTimeout
-from pytest import mark
+from httpx import AsyncClient, ReadTimeout
+from pytest import mark, raises
 
-from rapid_api_client import Path, RapidApi
-from rapid_api_client.async_ import delete, get, patch, post, put
+from rapid_api_client import Path, RapidApi, delete, get, patch, post, put
 
-from .conftest import HTTPBIN_URL, Infos
+from .conftest import BASE_URL, Infos
 
 
 class HttpBinApi(RapidApi):
-    @get("/delay/{delay}", response_class=Infos, timeout=3)
-    async def delay(self, delay: Annotated[int, Path()]): ...
+    @get("/anything")
+    async def get(self) -> Infos: ...
 
-    @get("/anything", response_class=Infos)
-    async def get(self): ...
+    @post("/anything")
+    async def post(self) -> Infos: ...
 
-    @post("/anything", response_class=Infos)
-    async def post(self): ...
+    @delete("/anything")
+    async def delete(self) -> Infos: ...
 
-    @delete("/anything", response_class=Infos)
-    async def delete(self): ...
+    @put("/anything")
+    async def put(self) -> Infos: ...
 
-    @put("/anything", response_class=Infos)
-    async def put(self): ...
-
-    @patch("/anything", response_class=Infos)
-    async def patch(self): ...
+    @patch("/anything")
+    async def patch(self) -> Infos: ...
 
 
 @mark.asyncio(loop_scope="module")
-async def test_http_get(async_client):
-    api = HttpBinApi(async_client)
+async def test_http_get():
+    api = HttpBinApi(base_url=BASE_URL)
     infos = await api.get()
     assert infos.method == "GET"
 
 
 @mark.asyncio(loop_scope="module")
-async def test_http_post(async_client):
-    api = HttpBinApi(async_client)
+async def test_http_post():
+    api = HttpBinApi(base_url=BASE_URL)
     infos = await api.post()
     assert infos.method == "POST"
 
 
 @mark.asyncio(loop_scope="module")
-async def test_http_put(async_client):
-    api = HttpBinApi(async_client)
+async def test_http_put():
+    api = HttpBinApi(base_url=BASE_URL)
     infos = await api.put()
     assert infos.method == "PUT"
 
 
 @mark.asyncio(loop_scope="module")
-async def test_http_delete(async_client):
-    api = HttpBinApi(async_client)
+async def test_http_delete():
+    api = HttpBinApi(base_url=BASE_URL)
     infos = await api.delete()
     assert infos.method == "DELETE"
 
 
 @mark.asyncio(loop_scope="module")
-async def test_http_patch(async_client):
-    api = HttpBinApi(async_client)
+async def test_http_patch():
+    api = HttpBinApi(base_url=BASE_URL)
     infos = await api.patch()
     assert infos.method == "PATCH"
 
 
 @mark.asyncio(loop_scope="module")
-async def test_http_timeout(async_client):
-    api = HttpBinApi(async_client)
-    infos = await api.delay(1)
-    assert str(infos.url) == f"{HTTPBIN_URL}/delay/1"
+async def test_http_timeout():
+    class HttpBinApi(RapidApi):
+        @get("/delay/{delay}")
+        async def delay(self, delay: Annotated[int, Path()]) -> Infos: ...
 
-    with pytest.raises(ReadTimeout):
-        infos = await api.delay(5)
+        @get("/delay/{delay}", timeout=1.5)
+        async def delay2(self, delay: Annotated[int, Path()]) -> Infos: ...
+
+    api = HttpBinApi(async_client=AsyncClient(base_url=BASE_URL, timeout=2.5))
+
+    infos = await api.delay(1)
+    assert str(infos.url) == f"{BASE_URL}/delay/1"
+
+    # default timeout has been set to 2.5
+    await api.delay(2)
+    with raises(ReadTimeout):
+        await api.delay(3)
+
+    # function timeout has been set to 1.5
+    await api.delay2(1)
+    with raises(ReadTimeout):
+        await api.delay2(2)

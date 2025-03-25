@@ -3,48 +3,54 @@ from typing import Annotated, Literal
 from pydantic import ValidationError
 from pytest import mark, raises
 
-from rapid_api_client import Header, Path, Query, RapidApi
-from rapid_api_client.async_ import get
-from tests.conftest import HTTPBIN_URL, Infos
+from rapid_api_client import Header, Path, Query, RapidApi, get
+
+from .conftest import BASE_URL, Infos
 
 
 @mark.asyncio(loop_scope="module")
-async def test_validation_path_fieldinfo(async_client):
+async def test_validation_path_fieldinfo():
     class MyApi(RapidApi):
-        @get("/anything/{param}", response_class=Infos)
-        def test(self, param: Annotated[str, Path(pattern="[a-z]+")]): ...
+        @get("/anything/{param}")
+        async def test(
+            self, param: Annotated[str, Path(pattern="[a-z]+")]
+        ) -> Infos: ...
 
-    api = MyApi(async_client)
+    api = MyApi(base_url=BASE_URL)
 
     resp = await api.test("foo")
-    assert str(resp.url) == f"{HTTPBIN_URL}/anything/foo"
+    assert str(resp.url) == f"{BASE_URL}/anything/foo"
 
     with raises(ValidationError):
         await api.test("FOO")
 
 
 @mark.asyncio(loop_scope="module")
-async def test_validation_path_annotation(async_client):
+async def test_validation_path_annotation():
     class MyApi(RapidApi):
-        @get("/anything/{param}", response_class=Infos)
-        def test(self, param: Annotated[Literal["foo", "bar"], Path()]): ...
+        @get("/anything/{param}")
+        async def test(
+            self, param: Annotated[Literal["foo", "bar"], Path()]
+        ) -> Infos: ...
 
-    api = MyApi(async_client)
+    api = MyApi(base_url=BASE_URL)
 
     resp = await api.test("foo")
-    assert str(resp.url) == f"{HTTPBIN_URL}/anything/foo"
+    assert str(resp.url) == f"{BASE_URL}/anything/foo"
 
     with raises(ValidationError):
-        await api.test("baz")
+        await api.test("baz")  # pyright: ignore[reportArgumentType]
 
 
 @mark.asyncio(loop_scope="module")
-async def test_validation_query_fieldinfo(async_client):
+async def test_validation_query_fieldinfo():
     class MyApi(RapidApi):
-        @get("/anything", response_class=Infos)
-        def test(self, param: Annotated[str, Query(pattern="[a-z]+")]): ...
+        @get("/anything")
+        async def test(
+            self, param: Annotated[str, Query(pattern="[a-z]+")]
+        ) -> Infos: ...
 
-    api = MyApi(async_client)
+    api = MyApi(base_url=BASE_URL)
 
     resp = await api.test("foo")
     query_params = dict(resp.url.query_params())
@@ -56,12 +62,14 @@ async def test_validation_query_fieldinfo(async_client):
 
 
 @mark.asyncio(loop_scope="module")
-async def test_validation_query_annotation(async_client):
+async def test_validation_query_annotation():
     class MyApi(RapidApi):
-        @get("/anything", response_class=Infos)
-        def test(self, param: Annotated[Literal["foo", "bar"], Query()]): ...
+        @get("/anything")
+        async def test(
+            self, param: Annotated[Literal["foo", "bar"], Query()]
+        ) -> Infos: ...
 
-    api = MyApi(async_client)
+    api = MyApi(base_url=BASE_URL)
 
     resp = await api.test("foo")
     query_params = dict(resp.url.query_params())
@@ -69,16 +77,18 @@ async def test_validation_query_annotation(async_client):
     assert query_params["param"] == "foo"
 
     with raises(ValidationError):
-        await api.test("baz")
+        await api.test("baz")  # pyright: ignore[reportArgumentType]
 
 
 @mark.asyncio(loop_scope="module")
-async def test_validation_header_fieldinfo(async_client):
+async def test_validation_header_fieldinfo():
     class MyApi(RapidApi):
-        @get("/anything", response_class=Infos)
-        def test(self, param: Annotated[str, Header(pattern="[a-z]+")]): ...
+        @get("/anything")
+        async def test(
+            self, param: Annotated[str, Header(pattern="[a-z]+")]
+        ) -> Infos: ...
 
-    api = MyApi(async_client)
+    api = MyApi(base_url=BASE_URL)
 
     resp = await api.test("foo")
     assert resp.headers["Param"] == ["foo"]
@@ -88,15 +98,17 @@ async def test_validation_header_fieldinfo(async_client):
 
 
 @mark.asyncio(loop_scope="module")
-async def test_validation_header_annotation(async_client):
+async def test_validation_header_annotation():
     class MyApi(RapidApi):
-        @get("/anything", response_class=Infos)
-        def test(self, param: Annotated[Literal["foo", "bar"], Header()]): ...
+        @get("/anything")
+        async def test(
+            self, param: Annotated[Literal["foo", "bar"], Header()]
+        ) -> Infos: ...
 
-    api = MyApi(async_client)
+    api = MyApi(base_url=BASE_URL)
 
     resp = await api.test("foo")
     assert resp.headers["Param"] == ["foo"]
 
     with raises(ValidationError):
-        await api.test("baz")
+        await api.test("baz")  # pyright: ignore[reportArgumentType]

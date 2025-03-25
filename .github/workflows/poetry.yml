@@ -6,15 +6,18 @@ jobs:
   test:
     name: Build and test App
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          fail-fast: false
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
       - name: Install poetry
         run: pip install poetry
-      - name: Build app
-        run: poetry build
       - name: Test app
         run: |
           poetry install
@@ -31,7 +34,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.12"
       - name: Install poetry
         run: pip install poetry
       - name: Publish app

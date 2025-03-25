@@ -1,3 +1,6 @@
+[project]
+name = "rapid-api-client"
+
 [tool.poetry]
 name = "rapid-api-client"
 version = "0.6.0"

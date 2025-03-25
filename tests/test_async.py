@@ -1,21 +1,35 @@
 import asyncio
 
+from httpx import AsyncClient
 from pytest import mark
 
-from rapid_api_client import RapidApi
-from rapid_api_client.async_ import AsyncRapidApi, get
+from rapid_api_client import RapidApi, get
 
-from .conftest import HTTPBIN_URL, Infos
+from .conftest import BASE_URL, Infos
 
 
 class HttpBinApi(RapidApi):
-    @get("/anything", response_class=Infos)
-    async def get(self): ...
+    @get("/anything")
+    async def get(self) -> Infos: ...
 
 
 @mark.asyncio(loop_scope="module")
-async def test_taskgroup(async_client):
-    api = HttpBinApi(async_client)
+async def test_client():
+    api = HttpBinApi(async_client=AsyncClient(base_url=BASE_URL))
+    infos = await api.get()
+    assert infos.method == "GET"
+
+
+@mark.asyncio(loop_scope="module")
+async def test_default_client():
+    api = HttpBinApi(base_url=BASE_URL)
+    infos = await api.get()
+    assert infos.method == "GET"
+
+
+@mark.asyncio(loop_scope="module")
+async def test_taskgroup():
+    api = HttpBinApi(base_url=BASE_URL)
 
     async with asyncio.TaskGroup() as tg:
         tasks = [tg.create_task(api.get()) for _ in range(3)]
@@ -27,8 +41,8 @@ async def test_taskgroup(async_client):
 
 
 @mark.asyncio(loop_scope="module")
-async def test_gather(async_client):
-    api = HttpBinApi(async_client)
+async def test_gather():
+    api = HttpBinApi(base_url=BASE_URL)
 
     asyncio.gather()
     tasks = await asyncio.gather(*[api.get() for _ in range(3)])
@@ -36,14 +50,3 @@ async def test_gather(async_client):
     assert len(tasks) == 3
     for infos in tasks:
         assert infos.method == "GET"
-
-
-@mark.asyncio(loop_scope="module")
-async def test_default_client():
-    class MyHttpBinApi(AsyncRapidApi):
-        @get(f"{HTTPBIN_URL}/anything", response_class=Infos)
-        async def get(self): ...
-
-    api = MyHttpBinApi()
-    resp = await api.get()
-    assert resp.method == "GET"

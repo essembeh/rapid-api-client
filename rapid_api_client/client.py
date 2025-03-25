@@ -1,5 +1,15 @@
 """
-Decorator used to build the httpx request
+Client classes for the rapid-api-client library.
+
+This module provides the core classes for building API clients:
+- RapidApi: Base class for API clients
+- ParameterManager: Manages parameters for API requests
+- RapidParameter: Represents a function parameter with its annotation
+
+These classes handle the extraction of parameters from function signatures,
+the resolution of path templates, and the building of HTTP requests.
+They work together with the decorator module to provide a declarative way
+to define API clients.
 """
 
 from dataclasses import dataclass, field
@@ -9,13 +19,11 @@ from typing import (
     Dict,
     Generic,
     List,
-    Mapping,
     Self,
     Tuple,
-    Type,
 )
 
-from httpx import Client, Request, Response
+from httpx import AsyncClient, Client
 from pydantic import BaseModel, TypeAdapter
 from pydantic_core import PydanticUndefined
 
@@ -36,25 +44,67 @@ from .annotations import (
     PydanticXmlBody,
     Query,
 )
-from .typing import BA, BM, CLIENT, T
-from .utils import filter_none_values, find_annotation
+from .utils import BA, filter_none_values, find_annotation
 
 
 @dataclass
 class RapidParameter(Generic[BA]):
+    """
+    Represents a function parameter with its associated annotation.
+
+    This class is used internally to handle parameters that have been annotated
+    with one of the annotation types (Path, Query, Header, Body, etc.).
+
+    Attributes:
+        param: The function parameter
+        annot: The annotation associated with the parameter
+    """
+
     param: Parameter
     annot: BA
 
     @property
     def name(self) -> str:
+        """
+        Get the original parameter name.
+
+        Returns:
+            The name of the parameter as defined in the function signature
+        """
         return self.param.name
 
     def get_name(self, use_alias: bool = True) -> str:
+        """
+        Get the parameter name, using the alias if available and requested.
+
+        Args:
+            use_alias: Whether to use the alias defined in the annotation if available
+
+        Returns:
+            The parameter name or its alias
+        """
         if use_alias and self.annot.alias:
             return self.annot.alias
         return self.name
 
     def get_value(self, ba: BoundArguments, *, validate: bool = True) -> Any:
+        """
+        Get the parameter value from bound arguments.
+
+        This method retrieves the parameter value from the bound arguments,
+        or uses the default value if the parameter is not in the arguments.
+        It can also validate the value against the parameter's type annotation.
+
+        Args:
+            ba: The bound arguments from the function call
+            validate: Whether to validate the value against the parameter's type annotation
+
+        Returns:
+            The parameter value
+
+        Raises:
+            ValueError: If the parameter has no value and no default
+        """
         out = None
         if self.name in ba.arguments:
             out = ba.arguments.get(self.name)
@@ -75,9 +125,19 @@ class RapidParameter(Generic[BA]):
 
 
 @dataclass
-class RapidParameters:
+class ParameterManager:
     """
     Class containing all custom parameters used to build the request.
+
+    This class manages the different types of parameters (path, query, header, body)
+    that are used to build an HTTP request. It extracts these parameters from
+    function signatures and provides methods to resolve them into request components.
+
+    Attributes:
+        path_parameters: Parameters used to resolve the URL path
+        query_parameters: Parameters used as query parameters
+        header_parameters: Parameters used as HTTP headers
+        body_parameters: Parameters used in the request body
     """
 
     path_parameters: List[RapidParameter[Path]] = field(default_factory=list)
@@ -88,7 +148,20 @@ class RapidParameters:
     @classmethod
     def from_sig(cls, sig: Signature) -> Self:
         """
-        Iterate over parameters of given function to find annotated parameters
+        Create a ParameterManager from a function signature.
+
+        This method iterates over the parameters of the given function signature
+        to find parameters annotated with Path, Query, Header, or Body annotations.
+        It also performs consistency checks on body parameters.
+
+        Args:
+            sig: The function signature to analyze
+
+        Returns:
+            A new ParameterManager instance with the extracted parameters
+
+        Raises:
+            AssertionError: If body parameters are inconsistent (e.g., mixing FileBody and FormBody)
         """
         out = cls()
         for parameter in sig.parameters.values():
@@ -125,22 +198,68 @@ class RapidParameters:
         return out
 
     def get_resolved_path(self, path: str, ba: BoundArguments) -> str:
+        """
+        Resolve the URL path by substituting path parameters.
+
+        Args:
+            path: The URL path template with placeholders
+            ba: The bound arguments from the function call
+
+        Returns:
+            The resolved URL path with parameter values substituted
+        """
         path_params = filter_none_values(
             {p.get_name(): p.get_value(ba) for p in self.path_parameters}
         )
         return path.format(**path_params)
 
     def get_headers(self, ba: BoundArguments) -> Dict[str, Any]:
+        """
+        Get the HTTP headers from header parameters.
+
+        Args:
+            ba: The bound arguments from the function call
+
+        Returns:
+            A dictionary of HTTP headers
+        """
         return filter_none_values(
             {p.get_name(): p.get_value(ba) for p in self.header_parameters}
         )
 
     def get_query(self, ba: BoundArguments) -> Dict[str, Any]:
+        """
+        Get the query parameters.
+
+        Args:
+            ba: The bound arguments from the function call
+
+        Returns:
+            A dictionary of query parameters
+        """
         return filter_none_values(
             {p.get_name(): p.get_value(ba) for p in self.query_parameters}
         )
 
     def get_body(self, ba: BoundArguments) -> Tuple[str | None, Any]:
+        """
+        Get the request body and its type.
+
+        This method processes body parameters based on their annotation type
+        (FileBody, FormBody, PydanticXmlBody, PydanticBody, JsonBody, or Body)
+        and returns the appropriate body content and type.
+
+        Args:
+            ba: The bound arguments from the function call
+
+        Returns:
+            A tuple containing the body type (files, data, content, json, or None)
+            and the body content
+
+        Raises:
+            AssertionError: If using PydanticXmlBody without pydantic-xml installed
+                           or if a value doesn't match its expected type
+        """
         # check if no body parameters defined
         if len(self.body_parameters) > 0:
             first_body_param = self.body_parameters[0]
@@ -197,79 +316,77 @@ class RapidParameters:
         return (None, None)
 
 
-@dataclass
-class RapidApi(Generic[CLIENT]):
+class RapidApi:
     """
-    Represent an API, a RapidApi subclass should have methods decorated with @http
-    which are endpoints
+    Base class for API clients.
+
+    This class represents an API client. Subclasses should define methods
+    decorated with @http (or @get, @post, etc.) which represent API endpoints.
+
+    Example:
+        >>> from rapid_api_client import RapidApi, get, post
+        >>> from typing import Annotated
+        >>>
+        >>> class MyApi(RapidApi):
+        ...     @get("/users/{user_id}")
+        ...     def get_user(self, user_id: Annotated[int, Path()]): ...
+        ...
+        ...     @post("/users")
+        ...     def create_user(self, user: Annotated[dict, JsonBody()]): ...
+        >>>
+        >>> api = MyApi(base_url="https://api.example.com")
+        >>> user = api.get_user(123)
     """
 
-    client: CLIENT
-
-    def _build_request(
+    def __init__(
         self,
-        sig: Signature,
-        rapid_parameters: RapidParameters,
-        method: str,
-        path: str,
-        args: Tuple[Any],
-        kwargs: Mapping[str, Any],
-        timeout: float | None,
-    ) -> Request:
+        *,
+        client: Client | None = None,
+        async_client: AsyncClient | None = None,
+        **kwargs: Any,
+    ) -> None:
         """
-        Build the httpx request with given custom parameters.
+        Initialize a RapidApi instance.
+
+        Args:
+            client: An existing httpx.Client instance to use for synchronous requests
+            async_client: An existing httpx.AsyncClient instance to use for asynchronous requests
+            **kwargs: Additional arguments to pass to the httpx.Client and httpx.AsyncClient
+                     constructors when creating new clients. Common arguments include:
+                     - base_url: The base URL for the API
+                     - headers: Default headers to include in all requests
+                     - timeout: Default timeout for requests
         """
-        # valuate arguments from args and kwargs
-        # use partial binding not to fail on optional arguments with pydantic default values
-        ba = sig.bind_partial(*args, **kwargs)
-        # apply default values for optional arguments from python signature
-        ba.apply_defaults()
+        self._client: Client | None = client
+        self._async_client: AsyncClient | None = async_client
+        self.client_factory_args: Dict[str, Any] = kwargs
 
-        # resolve the api path
-        path = rapid_parameters.get_resolved_path(path, ba)
-
-        build_kwargs: Dict[str, Any] = {
-            "headers": rapid_parameters.get_headers(ba),
-            "params": rapid_parameters.get_query(ba),
-        }
-        post_kw, post_data = rapid_parameters.get_body(ba)
-        if post_kw is not None:
-            build_kwargs[post_kw] = post_data
-
-        # handle extra optional kwargs
-        if timeout is not None:
-            build_kwargs["timeout"] = timeout
-
-        return self.client.build_request(method, path, **build_kwargs)
-
-    def _handle_response(
-        self,
-        response: Response,
-        response_class: Type[Response | str | bytes | BM] | TypeAdapter[T] = Response,
-    ) -> Response | str | bytes | BM | T:
+    @property
+    def client(self) -> Client:
         """
-        Parse the response given the expected class
+        Get the synchronous HTTP client.
+
+        If no client was provided in the constructor, a new one is created
+        using the arguments provided in the constructor.
+
+        Returns:
+            The httpx.Client instance for making synchronous requests
         """
-        # do not check response status code if we return the Response itself
-        if response_class is Response:
-            return response
-        # before parsing the response, check its status
-        response.raise_for_status()
-        if response_class is str:
-            return response.text
-        if response_class is bytes:
-            return response.content
-        if isinstance(response_class, TypeAdapter):
-            return response_class.validate_json(response.content)
-        if pydantic_xml is not None and issubclass(
-            response_class, pydantic_xml.BaseXmlModel
-        ):
-            return response_class.from_xml(response.content)
-        if issubclass(response_class, BaseModel):
-            return response_class.model_validate_json(response.content)
-        raise ValueError(f"Response class not supported: {response_class}")
+        if self._client is None:
+            self._client = Client(**self.client_factory_args)
+        return self._client
 
+    @property
+    def async_client(self) -> AsyncClient:
+        """
+        Get the asynchronous HTTP client.
 
-@dataclass
-class SyncRapidApi(RapidApi[Client]):
-    client: Client = field(default_factory=Client)
+        If no async client was provided in the constructor, a new one is created
+        using the arguments provided in the constructor.
+
+        Returns:
+            The httpx.AsyncClient instance for making asynchronous requests
+        """
+        if self._async_client is None:
+            self._async_client = AsyncClient(**self.client_factory_args)
+        return self._async_client

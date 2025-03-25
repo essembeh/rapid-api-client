@@ -1,10 +1,8 @@
 from typing import Any, Dict, List
 
-import pytest
-from httpx import AsyncClient, Client
 from pydantic import BaseModel, Field, HttpUrl, IPvAnyAddress
 
-HTTPBIN_URL = "https://httpbingo.org"
+BASE_URL = "https://httpbingo.org"
 
 
 class Infos(BaseModel):
@@ -17,13 +15,3 @@ class Infos(BaseModel):
     method: str | None = None
     origin: IPvAnyAddress
     url: HttpUrl
-
-
-@pytest.fixture(scope="module")
-def sync_client() -> Client:
-    return Client(base_url=HTTPBIN_URL)
-
-
-@pytest.fixture(scope="module")
-def async_client() -> AsyncClient:
-    return AsyncClient(base_url=HTTPBIN_URL)

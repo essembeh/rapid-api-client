@@ -1,11 +1,18 @@
 import asyncio
 from typing import Annotated, Any, Dict
 
-from httpx import AsyncClient
 from pydantic import BaseModel, HttpUrl, IPvAnyAddress
 
-from rapid_api_client import FormBody, Header, Path, PydanticBody, Query
-from rapid_api_client.async_ import RapidApi, get, post
+from rapid_api_client import (
+    FormBody,
+    Header,
+    Path,
+    PydanticBody,
+    Query,
+    RapidApi,
+    get,
+    post,
+)
 
 
 class Infos(BaseModel):
@@ -25,30 +32,29 @@ class User(BaseModel):
 
 
 class HttpBinApi(RapidApi):
-    @get("/anything/{path1}/{path2}", response_class=Infos)
+    @get("/anything/{path1}/{path2}")
     async def get(
         self,
         path1: Annotated[str, Path()],
         path2: Annotated[str, Path()],
         x_custom_header: Annotated[str | None, Header()] = None,
         sort: Annotated[str, Query()] = "asc",
-    ): ...
+    ) -> Infos: ...
 
-    @post("/anything", response_class=Infos)
+    @post("/anything")
     async def post_form(
         self,
         field1: Annotated[str, FormBody()],
         field2: Annotated[str, FormBody()],
         extra_field: Annotated[Dict[str, str] | None, FormBody()] = None,
-    ): ...
+    ) -> Infos: ...
 
-    @post("/anything", response_class=Infos)
-    async def post_model(self, user: Annotated[User, PydanticBody()]): ...
+    @post("/anything")
+    async def post_model(self, user: Annotated[User, PydanticBody()]) -> Infos: ...
 
 
 async def main():
-    client = AsyncClient(base_url="https://httpbin.org")
-    api = HttpBinApi(client)
+    api = HttpBinApi(base_url="https://httpbin.org")
 
     print("GET request:")
     infos = await api.get("foo", "bar", x_custom_header="foobar")
