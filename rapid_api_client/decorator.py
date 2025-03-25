@@ -17,7 +17,7 @@ sending the requests, and processing the responses.
 import inspect
 from functools import partial, wraps
 from inspect import signature
-from typing import Any, Mapping
+from typing import Any, Mapping, Type
 
 from httpx import Response
 
@@ -117,6 +117,57 @@ def http(
             )
 
         return async_wrapper if is_async else wrapper
+
+    return decorator
+
+
+def rapid(**default_kwargs: Any) -> Any:
+    """
+    Class decorator to configure RapidApi subclasses with default parameters.
+
+    This decorator allows specifying default parameters for RapidApi subclasses
+    that will be passed to the constructor when instantiating the class.
+
+    Args:
+        **kwargs: Default arguments to pass to the RapidApi constructor
+
+    Returns:
+        A decorator function that wraps the RapidApi subclass
+
+    Example:
+        >>> from rapid_api_client import RapidApi, rapid, get
+        >>> from typing import Annotated
+        >>>
+        >>> @rapid(base_url="https://api.example.com", headers={"X-API-Key": "default-key"})
+        >>> class MyApi(RapidApi):
+        ...     @get("/users/{user_id}")
+        ...     def get_user(self, user_id: Annotated[int, Path()]): ...
+        >>>
+        >>> # No need to specify base_url or headers, they're provided by the decorator
+        >>> api = MyApi()
+        >>> user = api.get_user(123)
+        >>>
+        >>> # You can still override the defaults if needed
+        >>> custom_api = MyApi(headers={"X-API-Key": "custom-key"})
+    """
+
+    def decorator(cls: Type[RapidApi]) -> Type[RapidApi]:
+        # Store the original __init__ method
+        original_init = cls.__init__
+
+        @wraps(original_init)
+        def __init__(self: RapidApi, **init_kwargs: Any) -> None:
+            # Only apply default parameters if not present
+            for key, value in default_kwargs.items():
+                if key not in init_kwargs:
+                    init_kwargs[key] = value
+            # Call the original __init__ with the merged kwargs
+            original_init(self, **init_kwargs)
+
+        # Replace the __init__ method
+        cls.__init__ = __init__  # type: ignore
+
+        return cls
 
     return decorator
 

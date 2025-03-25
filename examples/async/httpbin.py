@@ -12,6 +12,7 @@ from rapid_api_client import (
     RapidApi,
     get,
     post,
+    rapid,
 )
 
 
@@ -31,6 +32,7 @@ class User(BaseModel):
     age: int
 
 
+@rapid(base_url="https://httpbin.org")
 class HttpBinApi(RapidApi):
     @get("/anything/{path1}/{path2}")
     async def get(
@@ -54,7 +56,7 @@ class HttpBinApi(RapidApi):
 
 
 async def main():
-    api = HttpBinApi(base_url="https://httpbin.org")
+    api = HttpBinApi()
 
     print("GET request:")
     infos = await api.get("foo", "bar", x_custom_header="foobar")
