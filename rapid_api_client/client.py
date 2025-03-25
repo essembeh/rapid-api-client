@@ -109,13 +109,9 @@ class RapidParameter(Generic[BA]):
         if self.name in ba.arguments:
             out = ba.arguments.get(self.name)
         else:
-            # check if pydantic model has a default value or a default factory
-            if self.annot.default is not PydanticUndefined:
-                out = self.annot.default
-            elif self.annot.default_factory is not None:
-                out = self.annot.default_factory()
-            else:
-                # No default value, raise an error
+            # Use pydantic default value if available
+            out = self.annot.get_default(call_default_factory=True)
+            if out is PydanticUndefined:
                 raise ValueError(f"Missing value for parameter {self.name}")
 
         if validate:

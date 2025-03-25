@@ -1,6 +1,7 @@
 from typing import Annotated
 
-from pytest import mark
+from pydantic import ValidationError
+from pytest import mark, raises
 
 from rapid_api_client import Query, RapidApi, get
 
@@ -11,7 +12,28 @@ from .conftest import BASE_URL, Infos
 async def test_query():
     class HttpBinApi(RapidApi):
         @get("/anything")
-        async def test(self, myparam: Annotated[str, Query()]) -> Infos: ...
+        async def test(
+            self,
+            myparam: Annotated[str, Query()],
+            myotherparam: Annotated[str, Query()],
+        ) -> Infos: ...
+
+    api = HttpBinApi(base_url=BASE_URL)
+
+    infos = await api.test("foo", "bar")
+    query_params = dict(infos.url.query_params())
+    assert len(query_params) == 2
+    assert query_params["myparam"] == "foo"
+    assert query_params["myotherparam"] == "bar"
+
+
+@mark.asyncio(loop_scope="module")
+async def test_query_default_pydantic():
+    class HttpBinApi(RapidApi):
+        @get("/anything")
+        async def test(
+            self, myparam: Annotated[str, Query(default="bar")]
+        ) -> Infos: ...
 
     api = HttpBinApi(base_url=BASE_URL)
 
@@ -20,34 +42,14 @@ async def test_query():
     assert len(query_params) == 1
     assert query_params["myparam"] == "foo"
 
-
-@mark.asyncio(loop_scope="module")
-async def test_query_default():
-    class HttpBinApi(RapidApi):
-        @get("/anything")
-        async def test(
-            self,
-            myparam: Annotated[str, Query(default="bar")],
-            otherparam: Annotated[str, Query(default_factory=lambda: "BAR")],
-        ) -> Infos: ...
-
-    api = HttpBinApi(base_url=BASE_URL)
-
-    infos = await api.test("foo", "FOO")
-    query_params = dict(infos.url.query_params())
-    assert len(query_params) == 2
-    assert query_params["myparam"] == "foo"
-    assert query_params["otherparam"] == "FOO"
-
     infos = await api.test()  # pyright: ignore[reportCallIssue]
     query_params = dict(infos.url.query_params())
-    assert len(query_params) == 2
+    assert len(query_params) == 1
     assert query_params["myparam"] == "bar"
-    assert query_params["otherparam"] == "BAR"
 
 
 @mark.asyncio(loop_scope="module")
-async def test_query_default2():
+async def test_query_default_factory():
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test(self, myparam: Annotated[str, Query()] = "bar") -> Infos: ...
@@ -60,6 +62,25 @@ async def test_query_default2():
     assert query_params["myparam"] == "foo"
 
     infos = await api.test()
+    query_params = dict(infos.url.query_params())
+    assert len(query_params) == 1
+    assert query_params["myparam"] == "bar"
+
+
+@mark.asyncio(loop_scope="module")
+async def test_query_default_python():
+    class HttpBinApi(RapidApi):
+        @get("/anything")
+        async def test(self, myparam: Annotated[str, Query()] = "bar") -> Infos: ...
+
+    api = HttpBinApi(base_url=BASE_URL)
+
+    infos = await api.test("foo")
+    query_params = dict(infos.url.query_params())
+    assert len(query_params) == 1
+    assert query_params["myparam"] == "foo"
+
+    infos = await api.test()  # pyright: ignore[reportCallIssue]
     query_params = dict(infos.url.query_params())
     assert len(query_params) == 1
     assert query_params["myparam"] == "bar"
@@ -102,3 +123,18 @@ async def test_query_alias():
     query_params = dict(infos.url.query_params())
     assert len(query_params) == 1
     assert query_params["otherparam"] == "foo"
+
+
+@mark.asyncio(loop_scope="module")
+async def test_query_validation():
+    class HttpBinApi(RapidApi):
+        @get("/anything")
+        async def test(
+            self, myparam: Annotated[str, Query(max_length=3)] = "bar"
+        ) -> Infos: ...
+
+    api = HttpBinApi(base_url=BASE_URL)
+
+    for bad_value in ["foobar", "fooo", 42, None]:
+        with raises(ValidationError):
+            await api.test(bad_value)

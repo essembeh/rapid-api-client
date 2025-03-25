@@ -1,6 +1,7 @@
 from typing import Annotated
 
-from pytest import mark
+from pydantic import ValidationError
+from pytest import mark, raises
 
 from rapid_api_client import Header, RapidApi, get
 
@@ -8,40 +9,65 @@ from .conftest import BASE_URL, Infos
 
 
 @mark.asyncio(loop_scope="module")
-async def test_header():
+async def test_headers():
     class HttpBinApi(RapidApi):
         @get("/anything")
-        async def test(self, myheader: Annotated[str, Header()]) -> Infos: ...
+        async def test(
+            self,
+            myheader: Annotated[str, Header()],
+            myotherheader: Annotated[str, Header()],
+        ) -> Infos: ...
+
+    api = HttpBinApi(base_url=BASE_URL)
+
+    infos = await api.test("foo", "bar")
+    assert infos.headers["Myheader"] == ["foo"]
+    assert infos.headers["Myotherheader"] == ["bar"]
+
+
+@mark.asyncio(loop_scope="module")
+async def test_header_default_pydantic():
+    class HttpBinApi(RapidApi):
+        @get("/anything")
+        async def test(
+            self, myheader: Annotated[str, Header(default="bar")]
+        ) -> Infos: ...
 
     api = HttpBinApi(base_url=BASE_URL)
 
     infos = await api.test("foo")
     assert infos.headers["Myheader"] == ["foo"]
 
+    infos = await api.test()  # pyright: ignore[reportCallIssue]
+    assert infos.headers["Myheader"] == ["bar"]
+
+    with raises(ValidationError):
+        await api.test(None)
+
 
 @mark.asyncio(loop_scope="module")
-async def test_header_default():
+async def test_header_default_factory():
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test(
             self,
-            myheader: Annotated[str, Header(default="bar")],
-            otherheader: Annotated[str, Header(default_factory=lambda: "BAR")],
+            myheader: Annotated[str, Header(default_factory=lambda: "bar")],
         ) -> Infos: ...
 
     api = HttpBinApi(base_url=BASE_URL)
 
-    infos = await api.test("foo", "FOO")
+    infos = await api.test("foo")
     assert infos.headers["Myheader"] == ["foo"]
-    assert infos.headers["Otherheader"] == ["FOO"]
 
     infos = await api.test()  # pyright: ignore[reportCallIssue]
     assert infos.headers["Myheader"] == ["bar"]
-    assert infos.headers["Otherheader"] == ["BAR"]
+
+    with raises(ValidationError):
+        await api.test(None)
 
 
 @mark.asyncio(loop_scope="module")
-async def test_header_default2():
+async def test_header_default_python():
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test(self, myheader: Annotated[str, Header()] = "bar") -> Infos: ...
@@ -53,6 +79,9 @@ async def test_header_default2():
 
     infos = await api.test()
     assert infos.headers["Myheader"] == ["bar"]
+
+    with raises(ValidationError):
+        await api.test(None)
 
 
 @mark.asyncio(loop_scope="module")
@@ -106,3 +135,18 @@ async def test_header_override():
 
     infos = await api.test("bar")
     assert infos.headers.get("Myheader") == ["bar"]
+
+
+@mark.asyncio(loop_scope="module")
+async def test_header_validation():
+    class HttpBinApi(RapidApi):
+        @get("/anything")
+        async def test(
+            self, myheader: Annotated[str, Header(max_length=3)] = "bar"
+        ) -> Infos: ...
+
+    api = HttpBinApi(base_url=BASE_URL)
+
+    for bad_value in ["foobar", "fooo", 42, None]:
+        with raises(ValidationError):
+            await api.test(bad_value)
