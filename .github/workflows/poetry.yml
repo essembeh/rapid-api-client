@@ -20,7 +20,7 @@ jobs:
         run: pip install poetry
       - name: Test app
         run: |
-          poetry install
+          poetry install --no-interaction
           poetry run -- pytest --cov=rapid_api_client tests/
           poetry run -- coverage report
           poetry run -- coverage xml
@@ -40,4 +40,4 @@ jobs:
       - name: Publish app
         env:
           PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
-        run: poetry publish --build --username "__token__" --password "$PYPI_TOKEN"
+        run: poetry publish --no-interaction --build --username "__token__" --password "$PYPI_TOKEN"
