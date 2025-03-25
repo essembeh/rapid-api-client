@@ -48,6 +48,7 @@ def http(
         path: The URL path template, which can contain placeholders for path parameters
         timeout: Optional timeout for the request in seconds
         headers: Optional additional headers to include in the request
+        raise_for_status: Whether to raise an exception for non-2xx status codes
 
     Returns:
         A decorator function that wraps the API endpoint method
