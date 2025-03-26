@@ -298,7 +298,7 @@ class ParameterManager:
                 # there is one PydanticBody parameter
                 if (value := first_body_param.get_value(ba)) is not None:
                     assert isinstance(value, BaseModel)
-                    return "content", value.model_dump_json()
+                    return "content", value.model_dump_json(by_alias=True)
             elif isinstance(first_body_param.annot, JsonBody):
                 # there is one JsonBody parameter
                 if (value := first_body_param.get_value(ba)) is not None:

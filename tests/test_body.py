@@ -1,6 +1,6 @@
 from typing import Annotated, Dict
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pytest import mark, raises
 
 from rapid_api_client import (
@@ -84,22 +84,17 @@ async def test_body_form():
 @mark.asyncio(loop_scope="module")
 async def test_body_pydantic():
     class User(BaseModel):
-        name: str
+        foo: str = Field(alias="firstname")
+        bar: str = Field(alias="lastname")
         age: int
 
     class HttpBinApi(RapidApi):
-        @post("/anything")
-        async def test(
-            self,
-            body: Annotated[User, PydanticBody()],
-            content_type: Annotated[
-                str, Header(alias="content-type", default="application/json")
-            ],
-        ) -> Infos: ...
+        @post("/anything", headers={"content-type": "application/json"})
+        async def test(self, body: Annotated[User, PydanticBody()]) -> Infos: ...
 
     api = HttpBinApi(base_url=BASE_URL)
 
-    user = User(name="John Doe", age=42)
+    user = User(firstname="John", lastname="Doe", age=42)
     infos = await api.test(user)  # pyright: ignore[reportCallIssue]
     user2 = User.model_validate_json(infos.data)
     assert user == user2
