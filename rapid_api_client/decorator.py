@@ -17,7 +17,7 @@ sending the requests, and processing the responses.
 import inspect
 from functools import partial, wraps
 from inspect import signature
-from typing import Any, Mapping, Type
+from typing import Any, Dict, Type
 
 from httpx import Response
 
@@ -29,7 +29,7 @@ def http(
     method: str,
     path: str,
     timeout: float | None = None,
-    headers: Mapping[str, str] | None = None,
+    headers: Dict[str, str] | None = None,
     raise_for_status: bool = True,
 ) -> Any:
     """
@@ -82,7 +82,7 @@ def http(
             # resolve the api path
             resolved_path = parameter_manager.get_resolved_path(path, ba)
 
-            build_kwargs: Mapping[str, Any] = {
+            build_kwargs: Dict[str, Any] = {
                 "headers": parameter_manager.get_headers(ba),
                 "params": parameter_manager.get_query(ba),
             }
