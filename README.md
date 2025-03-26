@@ -1,20 +1,20 @@
 ![Github](https://img.shields.io/github/tag/essembeh/rapid-api-client.svg)
 ![PyPi](https://img.shields.io/pypi/v/rapid-api-client.svg)
 ![Python](https://img.shields.io/pypi/pyversions/rapid-api-client.svg)
-![CI](https://github.com/essembeh/python-helloworld/actions/workflows/poetry.yml/badge.svg)
+![CI](https://github.com/essembeh/rapid-api-client/actions/workflows/poetry.yml/badge.svg)
 
-> 🙏 As a Python Backend developer, I've wasted so much time in recent years writing the same API clients over and over using [Requests](https://requests.readthedocs.io/) or [HTTPX](https://www.python-httpx.org/); At the same time, I could be so efficient by using [FastAPI](https://fastapi.tiangolo.com/) for API servers; I just wanted to save time for my upcoming projects, thinking that other developers might find it useful too.
+> 🙏 As a Python Backend developer, I've wasted so much time in recent years writing the same API clients over and over using [Requests](https://requests.readthedocs.io/) or [HTTPX](https://www.python-httpx.org/). At the same time, I could be so efficient by using [FastAPI](https://fastapi.tiangolo.com/) for API servers. I just wanted to save time for my upcoming projects, thinking that other developers might find it useful too.
 
-# Rapid Api Client
+# Rapid API Client
 
 Library to **rapidly** develop *API clients* in Python, based on [Pydantic](https://docs.pydantic.dev/) and [Httpx](https://www.python-httpx.org/), using almost only *decorators* and *annotations*.
 
 ✨ Main features:
 - ✏️ You don't write any code, you only declare the endpoints using *decorators* and *annotations*.
 - 🪄 Pydantic validation for `Header`, `Query`, `Path` or `Body` parameters.
-- 📤 Support Pydantic to parse and validate reponses content so your method returns a model object if the response is OK.
-- 📥 Also support Pydantic serialization for `Body` with `POST`-like opeations.
-- 🏗️ Does not reimplement any low-level http related logic (like auth, transport ...), it simply uses `httpx.Client` like you are used to, *decorators* simply build the `httpx.Request` for you.
+- 📤 Support Pydantic to parse and validate responses content so your method returns a model object if the response is OK.
+- 📥 Also support Pydantic serialization for `Body` with `POST`-like operations.
+- 🏗️ Does not reimplement any low-level HTTP related logic (like auth, transport...), it simply uses `httpx.Client` like you are used to. *Decorators* simply build the `httpx.Request` for you.
 - ⚡️ Support `async` operations, with `httpx.AsyncClient`.
 
 
@@ -51,7 +51,7 @@ class CreateUserRequest(BaseModel):
     email: str
 
 # Define your API client
-# Note: the @rapid decorator is optional, but it allows you set default values for your constructor
+# Note: the @rapid decorator is optional, but it allows you to set default values for your constructor
 @rapid(base_url="https://api.example.com")
 class UserApi(RapidApi):
     # GET request with path parameter and query parameter
@@ -102,9 +102,9 @@ if __name__ == "__main__":
 
 # Features
 
-## Http methods
+## HTTP Methods
 
-Any HTTP method can be used with `http` decorator
+Any HTTP method can be used with the `http` decorator:
 
 ```python
 from rapid_api_client import RapidApi, http 
@@ -122,7 +122,7 @@ class MyApi(RapidApi):
     def delete(self): ...
 ```
 
-Convenient decorators are available like `get`, `post`, `delete`, `put`, `patch`
+Convenient decorators are available like `get`, `post`, `delete`, `put`, `patch`:
 
 ```python
 from rapid_api_client import RapidApi, get, post, delete
@@ -139,7 +139,7 @@ class MyApi(RapidApi):
     def delete(self): ...
 ```
 
-To use you API, you just need to instanciate it with a `httpx.Client` like:
+To use your API, you just need to instantiate it with a `httpx.Client` like:
 
 ```python
 from httpx import Client
@@ -150,12 +150,12 @@ resp.raise_for_status()
 ```
 
 
-## `async` support
+## `async` Support
 
 > ✨ Since version `0.7.0`, the same code works for synchronous and `async` methods.
 
 You can write:
-```py
+```python
 class GithubIssuesApi(RapidApi):
 
     @get("/repos/{owner}/{repo}/issues")
@@ -171,35 +171,38 @@ issues_async = await api.alist_issues("essembeh", "rapid-api-client", state="clo
 # both lists are the same
 ```
 
-*RapidApiClient* support both `sync` and `async` methods, it will automatically choose `httpx.Client` or `httpx.AsyncClient` to build and send the HTTP request.
+*Rapid API Client* supports both `sync` and `async` methods. It will automatically choose `httpx.Client` or `httpx.AsyncClient` to build and send the HTTP request.
 
-By default, all parameters given to `RapidApi` contructor are used to instanciate a `httpx.Client` or `httpx.AsyncClient`, depending if your method is `async` or not, but you can provide a custom `client` or `async_client` (or both) to have more control on the clients creation.
+By default, all parameters given to the `RapidApi` constructor are used to instantiate a `httpx.Client` or `httpx.AsyncClient`, depending on whether your method is `async` or not. You can provide a custom `client` or `async_client` (or both) to have more control over the clients creation:
 
-```py
+```python
 from httpx import Client, AsyncClient
 
-# in this example, the sync client has a timeout of 10s and the async client has a timeout of 20s
-api = GithubIssuesApi(client=Client(base_url="https://api.github.com", timeout=10), async_client=AsyncClient(base_url="https://api.github.com", timeout=20))
+# In this example, the sync client has a timeout of 10s and the async client has a timeout of 20s
+api = GithubIssuesApi(
+    client=Client(base_url="https://api.github.com", timeout=10), 
+    async_client=AsyncClient(base_url="https://api.github.com", timeout=20)
+)
 
-issues_sync = api.list_issues("essembeh", "rapid-api-client", state="closed") # this http call has a timeout of 10s
-issues_async = await api.alist_issues("essembeh", "rapid-api-client", state="closed") # this one has a timeout of 20s
+issues_sync = api.list_issues("essembeh", "rapid-api-client", state="closed")  # this HTTP call has a timeout of 10s
+issues_async = await api.alist_issues("essembeh", "rapid-api-client", state="closed")  # this one has a timeout of 20s
 ```
 
 
 
-## Response parsing
+## Response Parsing
 
-By default methods return a `httpx.Response` object and the http return code is not tested (you have to call `resp.raise_for_status()` if you need to ensure the response is OK).
+By default, methods return a `httpx.Response` object and the HTTP return code is not tested (you have to call `resp.raise_for_status()` if you need to ensure the response is OK).
 
-But you can also specify a class so that the response is parsed, you can use:
+But you can also specify a class so that the response is parsed. You can use:
 - `httpx.Response` to get the response itself, this is the default behavior
 - `str` to get the `response.text` 
 - `bytes` to get the `response.content` 
-- Any *Pydantic* model class (subclass of `BaseModel`), the *json* will be automatically validated
-- Any *Pydantic-xml* model class (subclass of `BaseXmlModel`), the *xml* will be automatically validated
-- Any other class will try to use `TypeAdapter` to parse it (see [pydantic doc](https://docs.pydantic.dev/latest/api/type_adapter/)
+- Any *Pydantic* model class (subclass of `BaseModel`), the *JSON* will be automatically validated
+- Any *Pydantic-xml* model class (subclass of `BaseXmlModel`), the *XML* will be automatically validated
+- Any other class will try to use `TypeAdapter` to parse it (see [pydantic doc](https://docs.pydantic.dev/latest/api/type_adapter/))
 
-> Note: When the returned object is not `httpx.Response`, the `raise_for_status()` is called to ensure the http response is OK before parsing the content, you can disable this behavior by setting `raise_for_status=False` in the method decorator.
+> Note: When the returned object is not `httpx.Response`, the `raise_for_status()` is called to ensure the HTTP response is OK before parsing the content. You can disable this behavior by setting `raise_for_status=False` in the method decorator.
 
 ```python
 class User(BaseModel):
@@ -208,7 +211,7 @@ class User(BaseModel):
 
 class MyApi(RapidApi):
 
-    # This method return a httpx.Response, you can omit it, but you should add it for clarity
+    # This method returns a httpx.Response, you can omit it, but you should add it for clarity
     @get("/user/me")
     def get_user_raw(self) -> Response: ...
 
@@ -218,9 +221,9 @@ class MyApi(RapidApi):
 ```
 
 
-## Path parameters
+## Path Parameters
 
-Like `fastapi` you can use your method arguments to build the api path to call.
+Like `fastapi`, you can use your method arguments to build the API path to call:
 
 ```python
 class MyApi(RapidApi):
@@ -240,12 +243,11 @@ class MyApi(RapidApi):
     # Path parameters with a default value using a factory
     @get("/user/{user_id}")
     def get_user(self, user_id: Annotated[int, Path(default_factory=lambda: 42)]): ...
-
 ```
 
-## Query parameters
+## Query Parameters
 
-You can add `query parameters` to your request using the `Query` annotation.
+You can add `query parameters` to your request using the `Query` annotation:
 
 ```python
 class MyApi(RapidApi):
@@ -266,15 +268,15 @@ class MyApi(RapidApi):
     @get("/issues")
     def get_issues(self, sort: Annotated[str, Query(default_factory=lambda: "updated")]): ...
 
-    # Query parameter with a default value
+    # Query parameter with an alias
     @get("/issues")
     def get_issues(self, my_parameter: Annotated[str, Query(alias="sort")]): ...
 ```
 
 
-## Header parameter
+## Header Parameters
 
-You can add `headers` to your request using the `Header` annotation.
+You can add `headers` to your request using the `Header` annotation:
 
 ```python
 class MyApi(RapidApi):
@@ -295,7 +297,7 @@ class MyApi(RapidApi):
     @get("/issues")
     def get_issues(self, x_version: Annotated[str, Header(default_factory=lambda: "2024.06")]): ...
 
-    # Header parameter with a default value
+    # Header parameter with an alias
     @get("/issues")
     def get_issues(self, my_parameter: Annotated[str, Header(alias="x-version")]): ...
 
@@ -304,61 +306,59 @@ class MyApi(RapidApi):
     def get_issues(self): ...
 ```
 
-## Body parameter
+## Body Parameters
 
 You can send a body with your request using the `Body` annotation. 
 
-This body can be 
- - a *raw* object with `Body`
- - a `dict` object with `JsonBody` 
- - a *Pydantic* object  with `PydanticBody`
- - one or more files with `FileBody`
+This body can be:
+ - A *raw* object with `Body`
+ - A `dict` object with `JsonBody` 
+ - A *Pydantic* object with `PydanticBody`
+ - One or more files with `FileBody`
 
- ```python
+```python
 class MyApi(RapidApi):
 
-    # send a string in request content
+    # Send a string in request content
     @post("/string")
     def post_string(self, body: Annotated[str, Body()]): ...
 
-    # send a dict in request content as json
+    # Send a dict in request content as JSON
     @post("/string")
     def post_json(self, body: Annotated[dict, JsonBody()]): ...
 
-    # send a Pydantic model in serialized as json
+    # Send a Pydantic model serialized as JSON
     @post("/model")
     def post_model(self, body: Annotated[MyPydanticClass, PydanticBody()]): ...
 
-    # send a multiple files
+    # Send multiple files
     @post("/files")
     def post_files(self, report: Annotated[bytes, FileBody()], image: Annotated[bytes, FileBody()]): ...
 
-    # send a form
+    # Send a form
     @post("/form")
     def post_form(self, my_param: Annotated[str, FormBody(alias="name")], extra_fields: Annotated[Dict[str, str], FormBody()]): ...
+```
 
- ```
+## XML Support
 
- ## Xml Support
+XML is also supported if you use [Pydantic-Xml](https://pydantic-xml.readthedocs.io/), either for responses (if you type your function to return a `BaseXmlModel` subclass) or for POST/PUT content with `PydanticXmlBody`.
 
- Xml is also supported is you use [Pydantic-Xml](https://pydantic-xml.readthedocs.io/), either for responses (if you type your function to return a `BaseXmlModel` subclass) or for POST/PUT content with `PydanticXmlBody`.
-
- ```python
+```python
 class ResponseXmlRootModel(BaseXmlModel): ...
 
 class MyApi(RapidApi):
 
-    # parse response xml content
+    # Parse response XML content
     @get("/get")
     def get_xml(self) -> ResponseXmlRootModel: ...
 
-    # serialize xml model automatically
+    # Serialize XML model automatically
     @post("/post")
     def post_xml(self, body: Annotated[ResponseXmlRootModel, PydanticXmlBody()]): ...
+```
 
- ```
-
- # Examples
+# Examples
 
 ## Authentication and Error Handling
 
@@ -427,4 +427,4 @@ if __name__ == "__main__":
     main()
 ```
 
-See [example directory](./examples/) for more examples
+See the [examples directory](./examples/) for more examples.
