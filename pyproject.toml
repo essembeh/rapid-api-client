@@ -38,8 +38,8 @@ Issues = "https://github.com/essembeh/rapid-api-client/issues"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-pydantic = "^2.9.2"
-httpx = "^0.28.1"
+pydantic = "2.*"
+httpx = "0.*"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
