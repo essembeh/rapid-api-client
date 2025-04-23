@@ -21,7 +21,8 @@ from typing import Any, Dict, Type
 
 from httpx import Response
 
-from .client import ParameterManager, RapidApi
+from .client import RapidApi
+from .parameters import ParameterManager
 from .utils import process_response
 
 
