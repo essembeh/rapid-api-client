@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from httpx import AsyncClient, ReadTimeout
+from httpx import AsyncClient, ReadTimeout, Request
 from pytest import mark, raises
 
 from rapid_api_client import Path, RapidApi, delete, get, patch, post, put
@@ -83,3 +83,19 @@ async def test_http_timeout():
     await api.delay2(1)
     with raises(ReadTimeout):
         await api.delay2(2)
+
+
+@mark.asyncio(loop_scope="module")
+async def test_request_tweaker():
+    def my_tweaker(req: Request) -> Request:
+        req.headers["Myheader"] = "foo"
+        return req
+
+    class HttpBinApi(RapidApi):
+        @get("/anything", request_tweaker=my_tweaker)
+        async def get(self) -> Infos: ...
+
+    api = HttpBinApi(base_url=BASE_URL)
+    infos = await api.get()
+    assert infos.method == "GET"
+    assert infos.headers.get("Myheader") == ["foo"]
