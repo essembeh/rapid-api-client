@@ -17,7 +17,7 @@ from typing import (
     Dict,
 )
 
-from httpx import AsyncClient, Client
+from httpx import AsyncClient, Client, Request
 
 
 class RapidApi:
@@ -94,3 +94,12 @@ class RapidApi:
         if self._async_client is None:
             self._async_client = AsyncClient(**self.client_factory_args)
         return self._async_client
+
+    def _request_update(self, request: Request):
+        """
+        Allow subclasses to update the request id needed. For example to add a signature.
+
+        Args:
+            request: the request just before sending to the client
+        """
+        pass

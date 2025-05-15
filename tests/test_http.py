@@ -86,16 +86,21 @@ async def test_http_timeout():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_request_tweaker():
-    def my_tweaker(req: Request) -> Request:
-        req.headers["Myheader"] = "foo"
-        return req
-
+async def test_request_update():
     class HttpBinApi(RapidApi):
-        @get("/anything", request_tweaker=my_tweaker)
-        async def get(self) -> Infos: ...
+        def _request_update(self, request: Request):
+            request.headers["Myheader"] = "foo"
+
+        @get("/anything")
+        async def with_update(self) -> Infos: ...
+
+        @get("/anything", skip_request_update=True)
+        async def without_update(self) -> Infos: ...
 
     api = HttpBinApi(base_url=BASE_URL)
-    infos = await api.get()
-    assert infos.method == "GET"
-    assert infos.headers.get("Myheader") == ["foo"]
+
+    resp1 = await api.with_update()
+    assert resp1.headers.get("Myheader") == ["foo"]
+
+    resp2 = await api.without_update()
+    assert resp2.headers.get("Myheader") is None

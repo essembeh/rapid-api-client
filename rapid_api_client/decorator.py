@@ -17,9 +17,9 @@ sending the requests, and processing the responses.
 import inspect
 from functools import partial, wraps
 from inspect import signature
-from typing import Any, Callable, Dict, Optional, Type
+from typing import Any, Dict, Type
 
-from httpx import Request, Response
+from httpx import Response
 
 from .client import RapidApi
 from .parameters import ParameterManager
@@ -32,7 +32,7 @@ def http(
     timeout: float | None = None,
     headers: Dict[str, str] | None = None,
     raise_for_status: bool = True,
-    request_tweaker: Optional[Callable[[Request], Request]] = None,
+    skip_request_update: bool = False,
 ) -> Any:
     """
     Main decorator used to generate an HTTP request and return its result.
@@ -51,7 +51,7 @@ def http(
         timeout: Optional timeout for the request in seconds
         headers: Optional additional headers to include in the request
         raise_for_status: Whether to raise an exception for non-2xx status codes
-        request_tweaker: An optional function to modify the built request before sending it
+        skip_request_update: To skip calling RapidApi._request_update before sending
 
     Returns:
         A decorator function that wraps the API endpoint method
@@ -103,9 +103,9 @@ def http(
                 if is_async
                 else api.client.build_request(method, resolved_path, **build_kwargs)
             )
-            # If a request tweaker is given, apply it
-            if request_tweaker is not None:
-                out = request_tweaker(out)
+            # call the method allowing the client to update the request before sending it
+            if not skip_request_update:
+                api._request_update(out)
             return out
 
         @wraps(func)
