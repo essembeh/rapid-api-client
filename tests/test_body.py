@@ -13,6 +13,7 @@ from rapid_api_client import (
     RapidApi,
     post,
 )
+from rapid_api_client.serializer import pydantic_serializer
 
 from .conftest import BASE_URL, Infos
 
@@ -162,7 +163,7 @@ async def test_body_pydantic_serializer():
             body: Annotated[
                 Data,
                 PydanticBody(
-                    model_serializer=lambda m: m.model_dump_json(exclude_defaults=True)
+                    model_serializer=pydantic_serializer(exclude_defaults=True)
                 ),
             ],
         ) -> Infos: ...

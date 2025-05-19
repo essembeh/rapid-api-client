@@ -19,7 +19,11 @@ building HTTP requests.
 
 from pydantic.fields import FieldInfo
 
-from .serializer import ModelSerializer, pydantic_serializer, pydanticxml_serializer
+from .serializer import (
+    ModelSerializer,
+    default_pydantic_serializer,
+    default_pydanticxml_serializer,
+)
 
 
 class BaseAnnotation(FieldInfo):
@@ -226,7 +230,7 @@ class PydanticBody(Body):
     def __init__(
         self,
         *args,
-        model_serializer: ModelSerializer = pydantic_serializer,
+        model_serializer: ModelSerializer = default_pydantic_serializer,
         **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
@@ -265,7 +269,7 @@ class PydanticXmlBody(Body):
     def __init__(
         self,
         *args,
-        model_serializer: ModelSerializer = pydanticxml_serializer,
+        model_serializer: ModelSerializer = default_pydanticxml_serializer,
         **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
