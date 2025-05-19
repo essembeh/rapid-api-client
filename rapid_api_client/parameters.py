@@ -23,7 +23,7 @@ from typing import (
     Tuple,
 )
 
-from pydantic import BaseModel, TypeAdapter
+from pydantic import TypeAdapter
 from pydantic_core import PydanticUndefined
 
 try:
@@ -287,17 +287,12 @@ class ParameterManager:
                     return "data", values
             elif isinstance(first_body_param.annot, PydanticXmlBody):
                 # there is one PydanticXmlBody parameter
-                assert (
-                    pydantic_xml is not None
-                ), "pydantic-xml must be installed to use PydanticXmlBody"
                 if (value := first_body_param.get_value(ba)) is not None:
-                    assert isinstance(value, pydantic_xml.BaseXmlModel)
-                    return "content", value.to_xml()
+                    return "content", first_body_param.annot.model_serializer(value)
             elif isinstance(first_body_param.annot, PydanticBody):
                 # there is one PydanticBody parameter
                 if (value := first_body_param.get_value(ba)) is not None:
-                    assert isinstance(value, BaseModel)
-                    return "content", value.model_dump_json(by_alias=True)
+                    return "content", first_body_param.annot.model_serializer(value)
             elif isinstance(first_body_param.annot, JsonBody):
                 # there is one JsonBody parameter
                 if (value := first_body_param.get_value(ba)) is not None:

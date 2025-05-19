@@ -1,4 +1,4 @@
-from typing import Annotated, Dict
+from typing import Annotated, Dict, Optional
 
 from pydantic import BaseModel, Field
 from pytest import mark, raises
@@ -139,3 +139,38 @@ async def test_body_mixed():
                 param1: Annotated[str, Body()],
                 param2: Annotated[str, Body()],
             ) -> Infos: ...
+
+
+@mark.asyncio(loop_scope="module")
+async def test_body_pydantic_serializer():
+    class Data(BaseModel):
+        foo: Optional[str] = None
+        bar: Optional[str] = None
+
+    class HttpBinApi(RapidApi):
+        @post("/anything", headers={"content-type": "application/json"})
+        async def with_default(
+            self,
+            body: Annotated[
+                Data,
+                PydanticBody(),
+            ],
+        ) -> Infos: ...
+        @post("/anything", headers={"content-type": "application/json"})
+        async def without_default(
+            self,
+            body: Annotated[
+                Data,
+                PydanticBody(
+                    model_serializer=lambda m: m.model_dump_json(exclude_defaults=True)
+                ),
+            ],
+        ) -> Infos: ...
+
+    api = HttpBinApi(base_url=BASE_URL)
+
+    data = Data(foo="FOO")
+
+    resp_without_default = await api.without_default(data)
+    resp_with_default = await api.with_default(data)
+    assert resp_with_default.data != resp_without_default.data

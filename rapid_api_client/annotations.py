@@ -19,6 +19,8 @@ building HTTP requests.
 
 from pydantic.fields import FieldInfo
 
+from .serializer import ModelSerializer, pydantic_serializer, pydanticxml_serializer
+
 
 class BaseAnnotation(FieldInfo):
     """
@@ -219,8 +221,19 @@ class PydanticBody(Body):
         >>> response = api.create_user(new_user)  # Serializes the User model to JSON
     """
 
+    __slots__ = ["model_serializer"]
 
-class PydanticXmlBody(PydanticBody):
+    def __init__(
+        self,
+        *args,
+        model_serializer: ModelSerializer = pydantic_serializer,
+        **kwargs,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        self.model_serializer = model_serializer
+
+
+class PydanticXmlBody(Body):
     """
     Annotation to declare a Pydantic XML model to be serialized to XML and used as HTTP content.
 
@@ -246,3 +259,14 @@ class PydanticXmlBody(PydanticBody):
         >>> new_user = User(name="John", email="john@example.com", age=30)
         >>> response = api.create_user(new_user)  # Serializes the User model to XML
     """
+
+    __slots__ = ["model_serializer"]
+
+    def __init__(
+        self,
+        *args,
+        model_serializer: ModelSerializer = pydanticxml_serializer,
+        **kwargs,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        self.model_serializer = model_serializer
