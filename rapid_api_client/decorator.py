@@ -17,7 +17,7 @@ sending the requests, and processing the responses.
 import inspect
 from functools import partial, wraps
 from inspect import signature
-from typing import Any, Dict, Type
+from typing import Any, Dict, Optional, Type
 
 from httpx import Response
 
@@ -31,7 +31,7 @@ def http(
     path: str,
     timeout: float | None = None,
     headers: Dict[str, str] | None = None,
-    raise_for_status: bool = True,
+    raise_for_status: Optional[bool] = None,
     skip_request_update: bool = False,
 ) -> Any:
     """

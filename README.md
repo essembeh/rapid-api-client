@@ -202,7 +202,7 @@ But you can also specify a class so that the response is parsed. You can use:
 - Any *Pydantic-xml* model class (subclass of `BaseXmlModel`), the *XML* will be automatically validated
 - Any other class will try to use `TypeAdapter` to parse it (see [pydantic doc](https://docs.pydantic.dev/latest/api/type_adapter/))
 
-> Note: When the returned object is not `httpx.Response`, the `raise_for_status()` is called to ensure the HTTP response is OK before parsing the content. You can disable this behavior by setting `raise_for_status=False` in the method decorator.
+> Note: When the returned object is not `httpx.Response`, the `raise_for_status()` is called to ensure the HTTP response is OK before parsing the content. You can disable this behavior by setting `raise_for_status=False` in the method decorator. For `httpx.Response` return types, `raise_for_status()` is only called if explicitly set to `raise_for_status=True`.
 
 ```python
 class User(BaseModel):
@@ -218,6 +218,56 @@ class MyApi(RapidApi):
     # This method returns a User class
     @get("/user/me")
     def get_user(self) -> User: ...
+```
+
+### Error Handling with `raise_for_status`
+
+The `raise_for_status` parameter provides fine-grained control over HTTP error handling:
+
+```python
+from httpx import Response, HTTPStatusError
+from rapid_api_client import RapidApi, get
+
+class MyApi(RapidApi):
+
+    # Raw Response: No automatic error checking (default behavior)
+    @get("/status/500")
+    def get_raw_response(self) -> Response: ...
+
+    # Raw Response: Explicitly enable error checking
+    @get("/status/500", raise_for_status=True)
+    def get_raw_response_with_errors(self) -> Response: ...
+
+    # Parsed Response: Automatic error checking (default behavior)
+    @get("/status/500")
+    def get_parsed_response(self) -> str: ...
+
+    # Parsed Response: Disable error checking
+    @get("/status/500", raise_for_status=False)
+    def get_parsed_response_no_errors(self) -> str: ...
+
+# Usage examples
+api = MyApi(base_url="https://httpbin.org")
+
+# This will return a Response object with status 500, no exception raised
+response = api.get_raw_response()
+print(response.status_code)  # 500
+
+# This will raise HTTPStatusError due to explicit raise_for_status=True
+try:
+    response = api.get_raw_response_with_errors()
+except HTTPStatusError as e:
+    print(f"HTTP Error: {e.response.status_code}")
+
+# This will raise HTTPStatusError due to automatic error checking for parsed responses
+try:
+    content = api.get_parsed_response()
+except HTTPStatusError as e:
+    print(f"HTTP Error: {e.response.status_code}")
+
+# This will return the error response content as a string, no exception raised
+error_content = api.get_parsed_response_no_errors()
+print(error_content)  # Error page HTML/JSON content
 ```
 
 

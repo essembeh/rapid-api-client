@@ -98,11 +98,20 @@ async def test_response_error_raise():
         @get("/status/500")
         async def raw(self) -> Response: ...
 
-        @get("/status/500")
-        async def with_raise(self) -> Infos: ...
+        @get("/status/500", raise_for_status=True)
+        async def raw_with_raise(self) -> Response: ...
 
         @get("/status/500", raise_for_status=False)
-        async def witout_raise(self) -> str: ...
+        async def raw_without_raise(self) -> Response: ...
+
+        @get("/status/500")
+        async def parsed(self) -> str: ...
+
+        @get("/status/500", raise_for_status=True)
+        async def parsed_with_raise(self) -> str: ...
+
+        @get("/status/500", raise_for_status=False)
+        async def parsed_without_raise(self) -> str: ...
 
     api = HttpBinApi(base_url=BASE_URL)
 
@@ -110,7 +119,16 @@ async def test_response_error_raise():
     assert resp.status_code == 500
 
     with raises(HTTPError):
-        await api.with_raise()
+        await api.raw_with_raise()
 
-    infos = await api.witout_raise()
+    resp = await api.raw_without_raise()
+    assert resp.status_code == 500
+
+    with raises(HTTPError):
+        await api.parsed()
+
+    with raises(HTTPError):
+        await api.parsed_with_raise()
+
+    infos = await api.parsed_without_raise()
     assert isinstance(infos, str)

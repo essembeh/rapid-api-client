@@ -86,7 +86,7 @@ def find_annotation(param: Parameter, cls: Type[BA]) -> Optional[BA]:
 
 
 def process_response(
-    response: Response, response_class: Type[T], raise_for_status: bool = True
+    response: Response, response_class: Type[T], raise_for_status: Optional[bool] = None
 ) -> T:
     """
     Process the HTTP response and convert it to the specified type.
@@ -151,10 +151,13 @@ def process_response(
         '{"error": "Not found"}'
     """
     if response_class is Response:
+        # In case of Response, only check status if explicitly asked
+        if raise_for_status is True:
+            response.raise_for_status()
         return cast(T, response)
 
     # For other types than Response, check if the response status code indicates an error
-    if raise_for_status:
+    if raise_for_status is not False:
         response.raise_for_status()
 
     # In case of a string or bytes, return the response content
