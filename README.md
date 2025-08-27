@@ -189,7 +189,6 @@ issues_async = await api.alist_issues("essembeh", "rapid-api-client", state="clo
 ```
 
 
-
 ## Response Parsing
 
 By default, methods return a `httpx.Response` object and the HTTP return code is not tested (you have to call `resp.raise_for_status()` if you need to ensure the response is OK).
@@ -199,6 +198,7 @@ But you can also specify a class so that the response is parsed. You can use:
 - `str` to get the `response.text` 
 - `bytes` to get the `response.content` 
 - Any *Pydantic* model class (subclass of `BaseModel`), the *JSON* will be automatically validated
+    - If yout model extends `rapid_api_client.ResponseModel`, then you'll have access to the `httpx.Response` with the `_response` private attribute (see below for more examples)
 - Any *Pydantic-xml* model class (subclass of `BaseXmlModel`), the *XML* will be automatically validated
 - Any other class will try to use `TypeAdapter` to parse it (see [pydantic doc](https://docs.pydantic.dev/latest/api/type_adapter/))
 
@@ -219,6 +219,59 @@ class MyApi(RapidApi):
     @get("/user/me")
     def get_user(self) -> User: ...
 ```
+
+
+### `ResponseModel` - Access to HTTP Response Object
+
+When using Pydantic models for response parsing, you may sometimes need access to the raw HTTP response object (for example, to check headers or status codes). The `ResponseModel` class provides this functionality:
+
+```python
+from typing import Annotated
+from pydantic import ValidationError
+from rapid_api_client import RapidApi, get, Path, ResponseModel
+
+class UserResponse(ResponseModel):
+    id: int
+    name: str
+    email: str
+    
+class MyApi(RapidApi):
+    @get("/user/{user_id}")
+    def get_user(self, user_id: Annotated[int, Path()]) -> UserResponse: ...
+    
+    @get("/user/{user_id}", raise_for_status=False)
+    def get_user_with_error_handling(self, user_id: Annotated[int, Path()]) -> UserResponse: ...
+
+# Usage
+api = MyApi(base_url="https://api.example.com")
+
+# Get a user - the response object has access to the original HTTP response
+user = api.get_user(123)
+print(f"User: {user.name}")
+print(f"Response status: {user._response.status_code}")
+print(f"Response headers: {user._response.headers}")
+print(f"Request URL: {user._response.url}")
+
+# Even works with error responses when raise_for_status=False
+try:
+    user = api.get_user_with_error_handling(999)  # Non-existent user
+    if user._response.status_code == 404:
+        print("User not found")
+    elif user._response.status_code >= 500:
+        print("Server error occurred")
+except ValidationError:
+    # This happens if the error response cannot be parsed as UserResponse
+    print("Could not parse error response")
+```
+
+Key benefits of `ResponseModel`:
+- **Access to HTTP metadata**: Status codes, headers, URL, etc.
+- **Error handling**: Check response status even when `raise_for_status=False`
+- **Debugging**: Inspect the raw response for troubleshooting
+- **Conditional logic**: Make decisions based on status codes or headers
+
+> **Note**: Regular `BaseModel` classes do not have the `_response` attribute. Only classes that inherit from `ResponseModel` get access to the original HTTP response object.
+
 
 ### Error Handling with `raise_for_status`
 

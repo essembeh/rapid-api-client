@@ -43,6 +43,7 @@ from .annotations import (
 )
 from .client import RapidApi
 from .decorator import delete, get, http, patch, post, put, rapid
+from .response import ResponseModel
 
 __version__ = version(__name__)
 __all__ = [
@@ -63,4 +64,5 @@ __all__ = [
     "Query",
     "rapid",
     "RapidApi",
+    "ResponseModel",
 ]

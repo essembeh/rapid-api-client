@@ -23,7 +23,7 @@ from httpx import Response
 
 from .client import RapidApi
 from .parameters import ParameterManager
-from .utils import process_response
+from .response import process_response
 
 
 def http(

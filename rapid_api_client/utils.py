@@ -10,11 +10,8 @@ These functions are primarily used internally by the library but may also be
 useful for advanced use cases.
 """
 
-from inspect import Parameter, isclass
-from typing import Any, Dict, Optional, Type, TypeVar, cast, get_args
-
-from httpx import Response
-from pydantic import BaseModel, TypeAdapter
+from inspect import Parameter
+from typing import Any, Dict, Optional, Type, TypeVar, get_args
 
 try:
     import pydantic_xml
@@ -83,100 +80,3 @@ def find_annotation(param: Parameter, cls: Type[BA]) -> Optional[BA]:
             if isinstance(an, cls) or issubclass(type(an), cls):
                 return an
     return None
-
-
-def process_response(
-    response: Response, response_class: Type[T], raise_for_status: Optional[bool] = None
-) -> T:
-    """
-    Process the HTTP response and convert it to the specified type.
-
-    This function handles the conversion of HTTP responses to various types based on
-    the specified response_class. It's a core utility used by the decorator module
-    to process API responses according to the return type annotation of the API method.
-
-    The conversion logic follows these rules:
-    1. If response_class is Response, return the raw response object
-    2. If response_class is str, return response.text
-    3. If response_class is bytes, return response.content
-    4. If response_class is a Pydantic XML model, parse the XML content
-    5. If response_class is a Pydantic model, parse the JSON content
-    6. For any other type, use Pydantic's TypeAdapter to validate the JSON content
-
-    Args:
-        response: The HTTP response object from httpx
-        response_class: The class to convert the response to (typically from the return
-                       type annotation of the API method)
-        raise_for_status: Whether to call response.raise_for_status() before processing
-                         the response. If True (default), HTTP errors (4xx, 5xx) will
-                         raise an HTTPStatusError. Set to False to skip this check.
-
-    Returns:
-        The response converted to the specified type
-
-    Raises:
-        HTTPStatusError: If raise_for_status is True and the response status code
-                        indicates an error (4xx, 5xx)
-        ValidationError: If the response content cannot be parsed into the specified type
-        TypeError: If the response_class is not supported
-
-    Examples:
-        # Return raw Response object
-        >>> process_response(response, Response)
-        <Response [200 OK]>
-
-        # Convert to string
-        >>> process_response(response, str)
-        '{"key": "value"}'
-
-        # Convert to bytes
-        >>> process_response(response, bytes)
-        b'{"key": "value"}'
-
-        # Convert to Pydantic model
-        >>> class MyModel(BaseModel):
-        ...     key: str
-        >>> process_response(response, MyModel)
-        MyModel(key='value')
-
-        # Convert to dataclass or other type
-        >>> @dataclass
-        ... class MyDataClass:
-        ...     key: str
-        >>> process_response(response, MyDataClass)
-        MyDataClass(key='value')
-
-        # Skip HTTP status check
-        >>> process_response(response, str, raise_for_status=False)
-        '{"error": "Not found"}'
-    """
-    if response_class is Response:
-        # In case of Response, only check status if explicitly asked
-        if raise_for_status is True:
-            response.raise_for_status()
-        return cast(T, response)
-
-    # For other types than Response, check if the response status code indicates an error
-    if raise_for_status is not False:
-        response.raise_for_status()
-
-    # In case of a string or bytes, return the response content
-    if response_class is str:
-        return cast(T, response.text)
-    if response_class is bytes:
-        return cast(T, response.content)
-
-    # Check if pydantic-xml is installed
-    if pydantic_xml is not None:
-        # Check if the response class is a pydantic-xml model
-        if isclass(response_class) and issubclass(
-            response_class, pydantic_xml.BaseXmlModel
-        ):
-            return cast(T, response_class.from_xml(response.content))
-
-    # Check if the response class is a pydantic model
-    if isclass(response_class) and issubclass(response_class, BaseModel):
-        return cast(T, response_class.model_validate_json(response.content))
-
-    # Fallback to TypeAdapter for other types
-    return cast(T, TypeAdapter(response_class).validate_json(response.content))

@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 
 from httpx import HTTPError, Response
+from pydantic import BaseModel
 from pytest import mark, raises
 
 from rapid_api_client import RapidApi, get
+from rapid_api_client.response import ResponseModel
 
 from .conftest import BASE_URL, Infos
 
@@ -132,3 +134,36 @@ async def test_response_error_raise():
 
     infos = await api.parsed_without_raise()
     assert isinstance(infos, str)
+
+
+@mark.asyncio(loop_scope="module")
+async def test_response_responsemodel():
+    class MyModel(BaseModel):
+        url: str
+        method: str
+
+    class MyReponseModel(ResponseModel):
+        url: str
+        method: str
+
+    class HttpBinApi(RapidApi):
+        @get("/anything")
+        async def test_model(self) -> MyModel: ...
+        @get("/anything")
+        async def test_responsemodel(self) -> MyReponseModel: ...
+
+    api = HttpBinApi(base_url=BASE_URL)
+
+    resp1 = await api.test_model()
+    assert isinstance(resp1, MyModel)
+    assert not hasattr(resp1, "_response")
+    assert str(resp1.url) == f"{BASE_URL}/anything"
+    assert resp1.method == "GET"
+
+    resp2 = await api.test_responsemodel()
+    assert isinstance(resp2, MyReponseModel)
+    assert hasattr(resp2, "_response")
+    assert isinstance(resp2._response, Response)
+    assert resp2._response.status_code == 200
+    assert str(resp2.url) == f"{BASE_URL}/anything"
+    assert resp2.method == "GET"
