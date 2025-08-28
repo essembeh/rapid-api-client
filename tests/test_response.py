@@ -4,8 +4,7 @@ from httpx import HTTPError, Response
 from pydantic import BaseModel
 from pytest import mark, raises
 
-from rapid_api_client import RapidApi, get
-from rapid_api_client.response import ResponseModel
+from rapid_api_client import RapidApi, ResponseModel, get
 
 from .conftest import BASE_URL, Infos
 
@@ -137,12 +136,12 @@ async def test_response_error_raise():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_response_responsemodel():
+async def test_response_rapidresponse():
     class MyModel(BaseModel):
         url: str
         method: str
 
-    class MyReponseModel(ResponseModel):
+    class MyModelWithResponse(ResponseModel):
         url: str
         method: str
 
@@ -150,7 +149,7 @@ async def test_response_responsemodel():
         @get("/anything")
         async def test_model(self) -> MyModel: ...
         @get("/anything")
-        async def test_responsemodel(self) -> MyReponseModel: ...
+        async def test_with_response(self) -> MyModelWithResponse: ...
 
     api = HttpBinApi(base_url=BASE_URL)
 
@@ -160,8 +159,8 @@ async def test_response_responsemodel():
     assert str(resp1.url) == f"{BASE_URL}/anything"
     assert resp1.method == "GET"
 
-    resp2 = await api.test_responsemodel()
-    assert isinstance(resp2, MyReponseModel)
+    resp2 = await api.test_with_response()
+    assert isinstance(resp2, MyModelWithResponse)
     assert hasattr(resp2, "_response")
     assert isinstance(resp2._response, Response)
     assert resp2._response.status_code == 200

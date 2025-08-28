@@ -11,7 +11,7 @@ class ResponseModel(BaseModel):
     """
     Base class for response models that need access to the original HTTP response.
 
-    This class extends Pydantic's BaseModel to provide access to the original
+    ResponseModel extends Pydantic's BaseModel to provide access to the original
     httpx.Response object through the `_response` private attribute. This is useful
     when you need to access HTTP metadata (status codes, headers, etc.) alongside
     the parsed response data.
@@ -29,17 +29,17 @@ class ResponseModel(BaseModel):
         >>> from rapid_api_client.response import ResponseModel
         >>> from rapid_api_client import RapidApi, get, Path
         >>> from typing import Annotated
-        >>> 
+        >>>
         >>> class UserResponse(ResponseModel):
         ...     id: int
         ...     name: str
         ...     email: str
-        >>> 
+        >>>
         >>> class UserApi(RapidApi):
         ...     @get("/users/{user_id}")
         ...     def get_user(self, user_id: Annotated[int, Path()]) -> UserResponse:
         ...         pass
-        >>> 
+        >>>
         >>> api = UserApi(base_url="https://api.example.com")
         >>> user = api.get_user(123)
         >>> print(f"User: {user.name}")
@@ -51,7 +51,9 @@ class ResponseModel(BaseModel):
         - Regular BaseModel classes do not get access to the HTTP response
         - The `_response` attribute is set automatically by the library's response processing
         - This works with both successful responses and error responses when raise_for_status=False
+        - Compatible with both JSON and XML when used with appropriate parsing
     """
+
     _response: Response = PrivateAttr(init=False)
 
 
@@ -136,21 +138,22 @@ def process_response(
     if response_class is bytes:
         return cast(T, response.content)
 
-    # Check if pydantic-xml is installed
-    if pydantic_xml is not None:
-        # Check if the response class is a pydantic-xml model
-        if isclass(response_class) and issubclass(
-            response_class, pydantic_xml.BaseXmlModel
-        ):
-            return cast(T, response_class.from_xml(response.content))
-
-    # Check if the response class is a pydantic model
-    if isclass(response_class) and issubclass(response_class, BaseModel):
+    out = None
+    if (
+        pydantic_xml is not None
+        and isclass(response_class)
+        and issubclass(response_class, pydantic_xml.BaseXmlModel)
+    ):
+        # Check if pydantic-xml is installed and if the response class is a pydantic-xml model
+        out = response_class.from_xml(response.content)
+    elif isclass(response_class) and issubclass(response_class, BaseModel):
+        # Check if the response class is a pydantic model
         out = response_class.model_validate_json(response.content)
-        # Check if the response class is a subclass of ResponseModel to set the reponse private attribute
-        if isinstance(out, ResponseModel):
-            out._response = response
-        return cast(T, out)
+    else:
+        # Fallback to TypeAdapter for other types
+        out = TypeAdapter(response_class).validate_json(response.content)
 
-    # Fallback to TypeAdapter for other types
-    return cast(T, TypeAdapter(response_class).validate_json(response.content))
+    # Check if the response class is a subclass of ResponseModel to set the response private attribute
+    if isinstance(out, ResponseModel):
+        out._response = response
+    return cast(T, out)
