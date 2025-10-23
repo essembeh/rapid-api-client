@@ -17,12 +17,31 @@ in API endpoint methods, indicating how they should be processed when
 building HTTP requests.
 """
 
+from types import MappingProxyType
+from typing import Any, Mapping, Optional
+
 from pydantic.fields import FieldInfo
 
-from .serializer import (
-    ModelSerializer,
-    default_pydantic_serializer,
-    default_pydanticxml_serializer,
+"""
+Default values used by :meth:`~pydantic.BaseModel.model_dump_json`
+See https://docs.pydantic.dev/latest/api/base_model/#pydantic.BaseModel.model_dump_json
+"""
+PYDANTIC_MODEL_SERIALIZER_DEFAULT_OPTIONS = MappingProxyType(
+    {
+        "by_alias": True,
+        "exclude_none": True,
+    }
+)
+
+"""
+Default values used by :meth:`~pydantic_xml.BaseXmlModel.to_xml`
+See https://pydantic-xml.readthedocs.io/en/latest/pages/api.html#pydantic_xml.BaseXmlModel.to_xml
+"""
+# See pydantic.BaseModel.model_dump_json
+PYDANTICXML_MODEL_SERIALIZER_DEFAULT_OPTIONS = MappingProxyType(
+    {
+        "exclude_none": True,
+    }
 )
 
 
@@ -225,16 +244,18 @@ class PydanticBody(Body):
         >>> response = api.create_user(new_user)  # Serializes the User model to JSON
     """
 
-    __slots__ = ["model_serializer"]
+    __slots__ = ("model_serializer_options",)
 
     def __init__(
         self,
         *args,
-        model_serializer: ModelSerializer = default_pydantic_serializer,
+        model_serializer_options: Optional[Mapping[str, Any]] = None,
         **kwargs,
-    ) -> None:
+    ):
         super().__init__(*args, **kwargs)
-        self.model_serializer = model_serializer
+        self.model_serializer_options = (
+            model_serializer_options or PYDANTIC_MODEL_SERIALIZER_DEFAULT_OPTIONS
+        )
 
 
 class PydanticXmlBody(Body):
@@ -264,13 +285,15 @@ class PydanticXmlBody(Body):
         >>> response = api.create_user(new_user)  # Serializes the User model to XML
     """
 
-    __slots__ = ["model_serializer"]
+    __slots__ = ("model_serializer_options",)
 
     def __init__(
         self,
         *args,
-        model_serializer: ModelSerializer = default_pydanticxml_serializer,
+        model_serializer_options: Optional[Mapping[str, Any]] = None,
         **kwargs,
-    ) -> None:
+    ):
         super().__init__(*args, **kwargs)
-        self.model_serializer = model_serializer
+        self.model_serializer_options = (
+            model_serializer_options or PYDANTICXML_MODEL_SERIALIZER_DEFAULT_OPTIONS
+        )

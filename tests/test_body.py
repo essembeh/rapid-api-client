@@ -13,7 +13,6 @@ from rapid_api_client import (
     RapidApi,
     post,
 )
-from rapid_api_client.serializer import pydantic_serializer
 
 from .conftest import BASE_URL, Infos
 
@@ -145,33 +144,97 @@ async def test_body_mixed():
 @mark.asyncio(loop_scope="module")
 async def test_body_pydantic_serializer():
     class Data(BaseModel):
-        foo: Optional[str] = None
-        bar: Optional[str] = None
+        text_none: Optional[str] = None
+        text_empty: Optional[str] = ""
+        text_default: Optional[str] = "42"
 
     class HttpBinApi(RapidApi):
         @post("/anything", headers={"content-type": "application/json"})
-        async def with_default(
+        async def test(
+            self,
+            body: Annotated[
+                Data,
+                PydanticBody(
+                    model_serializer_options={
+                        "exclude_unset": False,
+                        "exclude_defaults": False,
+                        "exclude_none": False,
+                    }
+                ),
+            ],
+        ) -> Infos: ...
+
+        @post("/anything", headers={"content-type": "application/json"})
+        async def exclude_unset(
+            self,
+            body: Annotated[
+                Data,
+                PydanticBody(
+                    model_serializer_options={
+                        "exclude_unset": True,
+                        "exclude_defaults": False,
+                        "exclude_none": False,
+                    }
+                ),
+            ],
+        ) -> Infos: ...
+
+        @post("/anything", headers={"content-type": "application/json"})
+        async def exclude_defaults(
+            self,
+            body: Annotated[
+                Data,
+                PydanticBody(
+                    model_serializer_options={
+                        "exclude_unset": False,
+                        "exclude_defaults": True,
+                        "exclude_none": False,
+                    }
+                ),
+            ],
+        ) -> Infos: ...
+
+        @post("/anything", headers={"content-type": "application/json"})
+        async def exclude_none(
+            self,
+            body: Annotated[
+                Data,
+                PydanticBody(
+                    model_serializer_options={
+                        "exclude_unset": False,
+                        "exclude_defaults": False,
+                        "exclude_none": True,
+                    }
+                ),
+            ],
+        ) -> Infos: ...
+
+        @post("/anything", headers={"content-type": "application/json"})
+        async def default_config(
             self,
             body: Annotated[
                 Data,
                 PydanticBody(),
             ],
         ) -> Infos: ...
-        @post("/anything", headers={"content-type": "application/json"})
-        async def without_default(
-            self,
-            body: Annotated[
-                Data,
-                PydanticBody(
-                    model_serializer=pydantic_serializer(exclude_defaults=True)
-                ),
-            ],
-        ) -> Infos: ...
 
     api = HttpBinApi(base_url=BASE_URL)
 
-    data = Data(foo="FOO")
-
-    resp_without_default = await api.without_default(data)
-    resp_with_default = await api.with_default(data)
-    assert resp_with_default.data != resp_without_default.data
+    assert (
+        await api.test(Data())
+    ).data == '{"text_none":null,"text_empty":"","text_default":"42"}'
+    assert (await api.exclude_unset(Data())).data == "{}"
+    assert (
+        await api.exclude_defaults(
+            Data(text_default="42", text_empty="", text_none=None)
+        )
+    ).data == "{}"
+    assert (
+        await api.exclude_none(Data())
+    ).data == '{"text_empty":"","text_default":"42"}'
+    assert (
+        await api.default_config(Data(text_default=None))
+    ).data == '{"text_empty":""}'
+    assert (
+        await api.default_config(Data())
+    ).data == '{"text_empty":"","text_default":"42"}'

@@ -23,13 +23,8 @@ from typing import (
     Tuple,
 )
 
-from pydantic import TypeAdapter
+from pydantic import BaseModel, TypeAdapter
 from pydantic_core import PydanticUndefined
-
-try:
-    import pydantic_xml
-except ImportError:  # pragma: nocover
-    pydantic_xml = None  # type: ignore
 
 from .annotations import (
     BaseAnnotation,
@@ -43,7 +38,7 @@ from .annotations import (
     PydanticXmlBody,
     Query,
 )
-from .utils import BA, filter_none_values, find_annotation
+from .utils import BA, filter_none_values, find_annotation, pydantic_xml
 
 
 @dataclass
@@ -286,13 +281,24 @@ class ParameterManager:
                 if len(values) > 0:
                     return "data", values
             elif isinstance(first_body_param.annot, PydanticXmlBody):
+                assert pydantic_xml, (
+                    "pydantic-xml must be installed to use XML serialization"
+                )
                 # there is one PydanticXmlBody parameter
                 if (value := first_body_param.get_value(ba)) is not None:
-                    return "content", first_body_param.annot.model_serializer(value)
+                    assert isinstance(value, pydantic_xml.BaseXmlModel)
+                    # used BaseXmlModel.to_xml to serialize object
+                    return "content", value.to_xml(
+                        **first_body_param.annot.model_serializer_options
+                    )
             elif isinstance(first_body_param.annot, PydanticBody):
                 # there is one PydanticBody parameter
                 if (value := first_body_param.get_value(ba)) is not None:
-                    return "content", first_body_param.annot.model_serializer(value)
+                    assert isinstance(value, BaseModel)
+                    # used BaseModel.model_dump_json to serialize object
+                    return "content", value.model_dump_json(
+                        **first_body_param.annot.model_serializer_options
+                    )
             elif isinstance(first_body_param.annot, JsonBody):
                 # there is one JsonBody parameter
                 if (value := first_body_param.get_value(ba)) is not None:
