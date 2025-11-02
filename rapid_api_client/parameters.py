@@ -23,7 +23,7 @@ from typing import (
     Tuple,
 )
 
-from pydantic import BaseModel, TypeAdapter
+from pydantic import TypeAdapter
 from pydantic_core import PydanticUndefined
 
 from .annotations import (
@@ -38,7 +38,7 @@ from .annotations import (
     PydanticXmlBody,
     Query,
 )
-from .utils import BA, filter_none_values, find_annotation, pydantic_xml
+from .utils import BA, filter_none_values, find_annotation
 
 
 @dataclass
@@ -88,13 +88,15 @@ class RapidParameter(Generic[BA]):
         This method retrieves the parameter value from the bound arguments,
         or uses the default value if the parameter is not in the arguments.
         It can also validate the value against the parameter's type annotation.
+        The value is then transformed using the annotation's transformer function
+        if one is defined.
 
         Args:
             ba: The bound arguments from the function call
             validate: Whether to validate the value against the parameter's type annotation
 
         Returns:
-            The parameter value
+            The parameter value, optionally transformed by the annotation's transformer
 
         Raises:
             ValueError: If the parameter has no value and no default
@@ -110,6 +112,9 @@ class RapidParameter(Generic[BA]):
 
         if validate:
             out = TypeAdapter(self.param.annotation).validate_python(out)
+
+        if out is not None:
+            out = self.annot.transform_value(out)
 
         return out
 
@@ -280,25 +285,10 @@ class ParameterManager:
 
                 if len(values) > 0:
                     return "data", values
-            elif isinstance(first_body_param.annot, PydanticXmlBody):
-                assert pydantic_xml, (
-                    "pydantic-xml must be installed to use XML serialization"
-                )
-                # there is one PydanticXmlBody parameter
+            elif isinstance(first_body_param.annot, (PydanticXmlBody, PydanticBody)):
+                # there is one PydanticXmlBody or PydanticBody parameter
                 if (value := first_body_param.get_value(ba)) is not None:
-                    assert isinstance(value, pydantic_xml.BaseXmlModel)
-                    # used BaseXmlModel.to_xml to serialize object
-                    return "content", value.to_xml(
-                        **first_body_param.annot.model_serializer_options
-                    )
-            elif isinstance(first_body_param.annot, PydanticBody):
-                # there is one PydanticBody parameter
-                if (value := first_body_param.get_value(ba)) is not None:
-                    assert isinstance(value, BaseModel)
-                    # used BaseModel.model_dump_json to serialize object
-                    return "content", value.model_dump_json(
-                        **first_body_param.annot.model_serializer_options
-                    )
+                    return "content", value
             elif isinstance(first_body_param.annot, JsonBody):
                 # there is one JsonBody parameter
                 if (value := first_body_param.get_value(ba)) is not None:

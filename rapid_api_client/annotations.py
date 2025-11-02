@@ -17,32 +17,13 @@ in API endpoint methods, indicating how they should be processed when
 building HTTP requests.
 """
 
-from types import MappingProxyType
-from typing import Any, Mapping, Optional
+from functools import partial
+from typing import Any, Callable, Optional
 
+from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 
-"""
-Default values used by :meth:`~pydantic.BaseModel.model_dump_json`
-See https://docs.pydantic.dev/latest/api/base_model/#pydantic.BaseModel.model_dump_json
-"""
-PYDANTIC_MODEL_SERIALIZER_DEFAULT_OPTIONS = MappingProxyType(
-    {
-        "by_alias": True,
-        "exclude_none": True,
-    }
-)
-
-"""
-Default values used by :meth:`~pydantic_xml.BaseXmlModel.to_xml`
-See https://pydantic-xml.readthedocs.io/en/latest/pages/api.html#pydantic_xml.BaseXmlModel.to_xml
-"""
-# See pydantic.BaseModel.model_dump_json
-PYDANTICXML_MODEL_SERIALIZER_DEFAULT_OPTIONS = MappingProxyType(
-    {
-        "exclude_none": True,
-    }
-)
+from .xml import pydantic_xml_transformer
 
 
 class BaseAnnotation(FieldInfo):
@@ -55,11 +36,30 @@ class BaseAnnotation(FieldInfo):
     from this class.
 
     Attributes:
+        transformer: Optional callable that transforms the parameter value before
+                    it's used in the request. If None, no transformation is applied.
         Inherits all attributes from pydantic.fields.FieldInfo, including:
         - default: Default value for the field
         - default_factory: Callable that returns a default value
         - alias: Alternative name for the field
+
+    Args:
+        transformer: Optional function to transform the parameter value.
+                    Should accept Any and return Any.
     """
+
+    __slots__ = ("transformer",)
+
+    def __init__(
+        self, *args, transformer: Optional[Callable[[Any], Any]] = None, **kwargs
+    ):
+        super().__init__(*args, **kwargs)
+        self.transformer = transformer
+
+    def transform_value(self, value: Any) -> Any:
+        if self.transformer:
+            return self.transformer(value)
+        return value
 
 
 class Path(BaseAnnotation):
@@ -67,7 +67,12 @@ class Path(BaseAnnotation):
     Annotation to declare an argument used to resolve the API path/URL.
 
     Use this annotation with the Annotated type to mark parameters that
-    should be substituted into the URL path.
+    should be substituted into the URL path. By default, values are converted
+    to strings using the built-in str() function.
+
+    Args:
+        transformer: Optional function to transform the parameter value before
+                    URL substitution. Defaults to str() for string conversion.
 
     Example:
         >>> from typing import Annotated
@@ -76,10 +81,18 @@ class Path(BaseAnnotation):
         >>> class MyApi(RapidApi):
         ...     @get("/users/{user_id}")
         ...     def get_user(self, user_id: Annotated[int, Path()]): ...
+        ...
+        ...     @get("/events/{event_date}")
+        ...     def get_events(self, event_date: Annotated[datetime, Path(transformer=lambda x: x.isoformat())]): ...
         >>>
         >>> api = MyApi(base_url="https://api.example.com")
         >>> user = api.get_user(123)  # Makes request to https://api.example.com/users/123
+        >>> events = api.get_events(datetime.now())  # Uses ISO format for date
     """
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("transformer", str)
+        super().__init__(*args, **kwargs)
 
 
 class Query(BaseAnnotation):
@@ -87,7 +100,12 @@ class Query(BaseAnnotation):
     Annotation to declare an argument used as a query parameter.
 
     Use this annotation with the Annotated type to mark parameters that
-    should be added to the URL as query parameters.
+    should be added to the URL as query parameters. By default, values are
+    converted to strings using the built-in str() function.
+
+    Args:
+        transformer: Optional function to transform the parameter value before
+                    adding to query string. Defaults to str() for string conversion.
 
     Example:
         >>> from typing import Annotated
@@ -96,10 +114,18 @@ class Query(BaseAnnotation):
         >>> class MyApi(RapidApi):
         ...     @get("/search")
         ...     def search(self, q: Annotated[str, Query()], page: Annotated[int, Query()] = 1): ...
+        ...
+        ...     @get("/events")
+        ...     def get_events(self, date: Annotated[datetime, Query(transformer=lambda x: x.isoformat())]): ...
         >>>
         >>> api = MyApi(base_url="https://api.example.com")
         >>> results = api.search("python")  # Makes request to https://api.example.com/search?q=python&page=1
+        >>> events = api.get_events(datetime.now())  # Uses ISO format for date parameter
     """
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("transformer", str)
+        super().__init__(*args, **kwargs)
 
 
 class Header(BaseAnnotation):
@@ -107,7 +133,12 @@ class Header(BaseAnnotation):
     Annotation to declare an argument used as a request header.
 
     Use this annotation with the Annotated type to mark parameters that
-    should be added to the HTTP request headers.
+    should be added to the HTTP request headers. By default, values are
+    converted to strings using the built-in str() function.
+
+    Args:
+        transformer: Optional function to transform the parameter value before
+                    adding to headers. Defaults to str() for string conversion.
 
     Example:
         >>> from typing import Annotated
@@ -116,10 +147,18 @@ class Header(BaseAnnotation):
         >>> class MyApi(RapidApi):
         ...     @get("/protected")
         ...     def get_protected(self, authorization: Annotated[str, Header()]): ...
+        ...
+        ...     @get("/timestamp")
+        ...     def get_with_timestamp(self, timestamp: Annotated[datetime, Header(transformer=lambda x: x.isoformat())]): ...
         >>>
         >>> api = MyApi(base_url="https://api.example.com")
         >>> data = api.get_protected("Bearer token123")  # Adds "Authorization: Bearer token123" header
+        >>> data = api.get_with_timestamp(datetime.now())  # Uses ISO format for timestamp header
     """
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("transformer", str)
+        super().__init__(*args, **kwargs)
 
 
 class Body(BaseAnnotation):
@@ -223,10 +262,17 @@ class PydanticBody(Body):
     Annotation to declare a Pydantic model to be serialized to JSON and used as HTTP content.
 
     Use this annotation to mark Pydantic model parameters that should be
-    serialized to JSON and sent in the request body.
+    serialized to JSON and sent in the request body. By default, uses Pydantic's
+    model_dump_json() with by_alias=True and exclude_none=True.
+
+    Args:
+        transformer: Optional function to transform the Pydantic model.
+                    Defaults to a function that calls model.model_dump_json(by_alias=True, exclude_none=True).
+                    Use functools.partial for custom serialization options.
 
     Example:
         >>> from typing import Annotated
+        >>> from functools import partial
         >>> from pydantic import BaseModel
         >>> from rapid_api_client import RapidApi, PydanticBody, post
         >>>
@@ -238,24 +284,24 @@ class PydanticBody(Body):
         >>> class MyApi(RapidApi):
         ...     @post("/users")
         ...     def create_user(self, user: Annotated[User, PydanticBody()]): ...
+        ...
+        ...     @post("/users/custom")
+        ...     def create_user_custom(self, user: Annotated[User, PydanticBody(
+        ...         transformer=partial(BaseModel.model_dump_json, exclude_none=False)
+        ...     )]): ...
         >>>
         >>> api = MyApi(base_url="https://api.example.com")
         >>> new_user = User(name="John", email="john@example.com", age=30)
-        >>> response = api.create_user(new_user)  # Serializes the User model to JSON
+        >>> response = api.create_user(new_user)  # Uses default serialization
+        >>> response = api.create_user_custom(new_user)  # Uses custom serialization options
     """
 
-    __slots__ = ("model_serializer_options",)
-
-    def __init__(
-        self,
-        *args,
-        model_serializer_options: Optional[Mapping[str, Any]] = None,
-        **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
-        self.model_serializer_options = (
-            model_serializer_options or PYDANTIC_MODEL_SERIALIZER_DEFAULT_OPTIONS
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault(
+            "transformer",
+            partial(BaseModel.model_dump_json, by_alias=True, exclude_none=True),
         )
+        super().__init__(*args, **kwargs)
 
 
 class PydanticXmlBody(Body):
@@ -264,10 +310,16 @@ class PydanticXmlBody(Body):
 
     Use this annotation to mark Pydantic XML model parameters that should be
     serialized to XML and sent in the request body. Requires the pydantic-xml
-    package to be installed.
+    package to be installed. By default, uses BaseXmlModel.to_xml() with exclude_none=True.
+
+    Args:
+        transformer: Optional function to transform the Pydantic XML model.
+                    Defaults to a function that calls model.to_xml(exclude_none=True).
+                    Use functools.partial for custom serialization options.
 
     Example:
         >>> from typing import Annotated
+        >>> from functools import partial
         >>> from pydantic_xml import BaseXmlModel, element
         >>> from rapid_api_client import RapidApi, PydanticXmlBody, post
         >>>
@@ -279,21 +331,18 @@ class PydanticXmlBody(Body):
         >>> class MyApi(RapidApi):
         ...     @post("/users")
         ...     def create_user(self, user: Annotated[User, PydanticXmlBody()]): ...
+        ...
+        ...     @post("/users/custom")
+        ...     def create_user_custom(self, user: Annotated[User, PydanticXmlBody(
+        ...         transformer=partial(BaseXmlModel.to_xml, exclude_none=False, skip_empty=False)
+        ...     )]): ...
         >>>
         >>> api = MyApi(base_url="https://api.example.com")
         >>> new_user = User(name="John", email="john@example.com", age=30)
-        >>> response = api.create_user(new_user)  # Serializes the User model to XML
+        >>> response = api.create_user(new_user)  # Uses default XML serialization
+        >>> response = api.create_user_custom(new_user)  # Uses custom serialization options
     """
 
-    __slots__ = ("model_serializer_options",)
-
-    def __init__(
-        self,
-        *args,
-        model_serializer_options: Optional[Mapping[str, Any]] = None,
-        **kwargs,
-    ):
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("transformer", pydantic_xml_transformer)
         super().__init__(*args, **kwargs)
-        self.model_serializer_options = (
-            model_serializer_options or PYDANTICXML_MODEL_SERIALIZER_DEFAULT_OPTIONS
-        )

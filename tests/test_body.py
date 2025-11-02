@@ -1,3 +1,4 @@
+from functools import partial
 from typing import Annotated, Dict, Optional
 
 from pydantic import BaseModel, Field
@@ -142,7 +143,7 @@ async def test_body_mixed():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_body_pydantic_serializer():
+async def test_body_pydantic_transformer():
     class Data(BaseModel):
         text_none: Optional[str] = None
         text_empty: Optional[str] = ""
@@ -155,11 +156,12 @@ async def test_body_pydantic_serializer():
             body: Annotated[
                 Data,
                 PydanticBody(
-                    model_serializer_options={
-                        "exclude_unset": False,
-                        "exclude_defaults": False,
-                        "exclude_none": False,
-                    }
+                    transformer=partial(
+                        BaseModel.model_dump_json,
+                        exclude_unset=False,
+                        exclude_defaults=False,
+                        exclude_none=False,
+                    )
                 ),
             ],
         ) -> Infos: ...
@@ -170,11 +172,12 @@ async def test_body_pydantic_serializer():
             body: Annotated[
                 Data,
                 PydanticBody(
-                    model_serializer_options={
-                        "exclude_unset": True,
-                        "exclude_defaults": False,
-                        "exclude_none": False,
-                    }
+                    transformer=partial(
+                        BaseModel.model_dump_json,
+                        exclude_unset=True,
+                        exclude_defaults=False,
+                        exclude_none=False,
+                    )
                 ),
             ],
         ) -> Infos: ...
@@ -185,11 +188,12 @@ async def test_body_pydantic_serializer():
             body: Annotated[
                 Data,
                 PydanticBody(
-                    model_serializer_options={
-                        "exclude_unset": False,
-                        "exclude_defaults": True,
-                        "exclude_none": False,
-                    }
+                    transformer=partial(
+                        BaseModel.model_dump_json,
+                        exclude_unset=False,
+                        exclude_defaults=True,
+                        exclude_none=False,
+                    )
                 ),
             ],
         ) -> Infos: ...
@@ -200,22 +204,19 @@ async def test_body_pydantic_serializer():
             body: Annotated[
                 Data,
                 PydanticBody(
-                    model_serializer_options={
-                        "exclude_unset": False,
-                        "exclude_defaults": False,
-                        "exclude_none": True,
-                    }
+                    transformer=partial(
+                        BaseModel.model_dump_json,
+                        exclude_unset=False,
+                        exclude_defaults=False,
+                        exclude_none=True,
+                    )
                 ),
             ],
         ) -> Infos: ...
 
         @post("/anything", headers={"content-type": "application/json"})
         async def default_config(
-            self,
-            body: Annotated[
-                Data,
-                PydanticBody(),
-            ],
+            self, body: Annotated[Data, PydanticBody()]
         ) -> Infos: ...
 
     api = HttpBinApi(base_url=BASE_URL)

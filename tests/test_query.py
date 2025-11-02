@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Annotated
 
 from pydantic import ValidationError
@@ -138,3 +139,47 @@ async def test_query_validation():
     for bad_value in ["foobar", "fooo", 42, None]:
         with raises(ValidationError):
             await api.test(bad_value)
+
+
+@mark.asyncio(loop_scope="module")
+async def test_query_transformer():
+    class HttpBinApi(RapidApi):
+        @get("/anything")
+        async def test_default(
+            self, myparam: Annotated[datetime, Query()]
+        ) -> Infos: ...
+
+        @get("/anything")
+        async def test_custom(
+            self,
+            myparam: Annotated[datetime, Query(transformer=lambda x: x.isoformat())],
+        ) -> Infos: ...
+
+        @get("/anything")
+        async def test_foo(
+            self, myparam: Annotated[datetime, Query(transformer=lambda x: "foo")]
+        ) -> Infos: ...
+
+    api = HttpBinApi(base_url=BASE_URL)
+
+    mydate = datetime(
+        year=2020,
+        month=12,
+        day=30,
+        hour=14,
+        minute=42,
+        second=12,
+        tzinfo=timezone.utc,
+    )
+
+    resp_default = await api.test_default(mydate)
+    assert len(resp_default.args) == 1
+    assert resp_default.args.get("myparam") == ["2020-12-30 14:42:12+00:00"]
+
+    resp_custom = await api.test_custom(mydate)
+    assert len(resp_custom.args) == 1
+    assert resp_custom.args.get("myparam") == ["2020-12-30T14:42:12+00:00"]
+
+    resp_foo = await api.test_foo(mydate)
+    assert len(resp_foo.args) == 1
+    assert resp_foo.args.get("myparam") == ["foo"]

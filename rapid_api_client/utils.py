@@ -13,11 +13,6 @@ useful for advanced use cases.
 from inspect import Parameter
 from typing import Any, Dict, Optional, Type, TypeVar, get_args
 
-try:
-    import pydantic_xml
-except ImportError:  # pragma: nocover
-    pydantic_xml = None  # type: ignore
-
 from .annotations import BaseAnnotation
 
 T = TypeVar("T")

@@ -316,9 +316,12 @@ print(error_content)  # Error page HTML/JSON content
 Like `fastapi`, you can use your method arguments to build the API path to call:
 
 ```python
+from datetime import datetime
+from functools import partial
+
 class MyApi(RapidApi):
 
-    # Path parameter
+    # Path parameter (automatically converted to string)
     @get("/user/{user_id}")
     def get_user(self, user_id: Annotated[int, Path()]): ...
 
@@ -333,6 +336,14 @@ class MyApi(RapidApi):
     # Path parameters with a default value using a factory
     @get("/user/{user_id}")
     def get_user(self, user_id: Annotated[int, Path(default_factory=lambda: 42)]): ...
+
+    # Custom transformation for datetime path parameters
+    @get("/events/{event_date}")
+    def get_events(self, event_date: Annotated[datetime, Path(transformer=lambda x: x.isoformat())]): ...
+
+    # Using partial for more complex transformations
+    @get("/files/{filename}")
+    def get_file(self, filename: Annotated[str, Path(transformer=partial(str.replace, old=" ", new="-"))]): ...
 ```
 
 ## Query Parameters
@@ -340,9 +351,12 @@ class MyApi(RapidApi):
 You can add `query parameters` to your request using the `Query` annotation:
 
 ```python
+from datetime import datetime
+from functools import partial
+
 class MyApi(RapidApi):
 
-    # Query parameter
+    # Query parameter (automatically converted to string)
     @get("/issues")
     def get_issues(self, sort: Annotated[str, Query()]): ...
 
@@ -361,6 +375,18 @@ class MyApi(RapidApi):
     # Query parameter with an alias
     @get("/issues")
     def get_issues(self, my_parameter: Annotated[str, Query(alias="sort")]): ...
+
+    # Custom transformation for datetime query parameters
+    @get("/events")
+    def get_events(self, date: Annotated[datetime, Query(transformer=lambda x: x.isoformat())]): ...
+
+    # Boolean parameter with custom formatting
+    @get("/search")
+    def search(self, include_archived: Annotated[bool, Query(transformer=lambda x: "true" if x else "false")]): ...
+
+    # List parameter with custom joining
+    @get("/filter")
+    def filter_items(self, tags: Annotated[list[str], Query(transformer=lambda x: ",".join(x))]): ...
 ```
 
 
@@ -369,9 +395,12 @@ class MyApi(RapidApi):
 You can add `headers` to your request using the `Header` annotation:
 
 ```python
+from datetime import datetime
+from functools import partial
+
 class MyApi(RapidApi):
 
-    # Header parameter
+    # Header parameter (automatically converted to string)
     @get("/issues")
     def get_issues(self, x_version: Annotated[str, Header()]): ...
 
@@ -391,6 +420,14 @@ class MyApi(RapidApi):
     @get("/issues")
     def get_issues(self, my_parameter: Annotated[str, Header(alias="x-version")]): ...
 
+    # Custom transformation for datetime headers
+    @get("/timestamp")
+    def get_with_timestamp(self, timestamp: Annotated[datetime, Header(transformer=lambda x: x.isoformat())]): ...
+
+    # Authorization header with custom formatting
+    @get("/protected")
+    def get_protected(self, token: Annotated[str, Header(alias="authorization", transformer=lambda x: f"Bearer {x}")]): ...
+
     # You can also add constant headers
     @get("/issues", headers={"x-version": "2024.06", "accept": "application/json"})
     def get_issues(self): ...
@@ -407,6 +444,13 @@ This body can be:
  - One or more files with `FileBody`
 
 ```python
+from functools import partial
+from pydantic import BaseModel
+
+class MyPydanticClass(BaseModel):
+    name: str
+    value: int
+
 class MyApi(RapidApi):
 
     # Send a string in request content
@@ -417,9 +461,15 @@ class MyApi(RapidApi):
     @post("/string")
     def post_json(self, body: Annotated[dict, JsonBody()]): ...
 
-    # Send a Pydantic model serialized as JSON
+    # Send a Pydantic model serialized as JSON (default: by_alias=True, exclude_none=True)
     @post("/model")
     def post_model(self, body: Annotated[MyPydanticClass, PydanticBody()]): ...
+
+    # Send a Pydantic model with custom serialization options
+    @post("/model/custom")
+    def post_model_custom(self, body: Annotated[MyPydanticClass, PydanticBody(
+        transformer=partial(BaseModel.model_dump_json, exclude_none=False, by_alias=False)
+    )]): ...
 
     # Send multiple files
     @post("/files")
@@ -435,6 +485,9 @@ class MyApi(RapidApi):
 XML is also supported if you use [Pydantic-Xml](https://pydantic-xml.readthedocs.io/), either for responses (if you type your function to return a `BaseXmlModel` subclass) or for POST/PUT content with `PydanticXmlBody`.
 
 ```python
+from functools import partial
+from pydantic_xml import BaseXmlModel
+
 class ResponseXmlRootModel(BaseXmlModel): ...
 
 class MyApi(RapidApi):
@@ -443,9 +496,87 @@ class MyApi(RapidApi):
     @get("/get")
     def get_xml(self) -> ResponseXmlRootModel: ...
 
-    # Serialize XML model automatically
+    # Serialize XML model automatically (default: exclude_none=True)
     @post("/post")
     def post_xml(self, body: Annotated[ResponseXmlRootModel, PydanticXmlBody()]): ...
+
+    # Serialize XML model with custom options
+    @post("/post/custom")
+    def post_xml_custom(self, body: Annotated[ResponseXmlRootModel, PydanticXmlBody(
+        transformer=partial(BaseXmlModel.to_xml, exclude_none=False, skip_empty=False)
+    )]): ...
+```
+
+## Parameter Transformers
+
+All parameter annotations (`Path`, `Query`, `Header`, `Body`, `PydanticBody`, `PydanticXmlBody`) support a `transformer` parameter that allows you to customize how parameter values are processed before being used in the HTTP request.
+
+### Default Transformers
+
+- **Path, Query, Header**: Default to `str()` for automatic string conversion
+- **PydanticBody**: Defaults to `partial(BaseModel.model_dump_json, by_alias=True, exclude_none=True)`
+- **PydanticXmlBody**: Defaults to `partial(BaseXmlModel.to_xml, exclude_none=True)`
+
+### Custom Transformers
+
+```python
+from datetime import datetime
+from functools import partial
+from pydantic import BaseModel
+from rapid_api_client import RapidApi, get, post, Path, Query, Header, PydanticBody
+
+class UserModel(BaseModel):
+    name: str
+    email: str
+    created_at: datetime
+
+class MyApi(RapidApi):
+    
+    # DateTime formatting for path parameters
+    @get("/events/{date}")
+    def get_events(self, date: Annotated[datetime, Path(transformer=lambda x: x.strftime("%Y-%m-%d"))]): ...
+    
+    # Custom boolean formatting for query parameters
+    @get("/search")
+    def search(self, 
+              active_only: Annotated[bool, Query(transformer=lambda x: "yes" if x else "no")],
+              tags: Annotated[list[str], Query(transformer=lambda x: ",".join(x))]): ...
+    
+    # Authorization header formatting
+    @get("/protected")
+    def get_protected(self, token: Annotated[str, Header(
+        alias="authorization", 
+        transformer=lambda x: f"Bearer {x}"
+    )]): ...
+    
+    # Custom JSON serialization with different options
+    @post("/users")
+    def create_user(self, user: Annotated[UserModel, PydanticBody(
+        transformer=partial(BaseModel.model_dump_json, exclude_none=False, by_alias=False)
+    )]): ...
+    
+    # Complex transformations using external functions
+    @get("/files/{path}")
+    def get_file(self, file_path: Annotated[str, Path(transformer=url_encode_path)]): ...
+
+def url_encode_path(path: str) -> str:
+    """Custom transformer function"""
+    return path.replace(" ", "%20").replace("/", "%2F")
+```
+
+### Transformer Function Signature
+
+Transformer functions must accept any value and return any value:
+
+```python
+from typing import Any, Callable
+
+TransformerFunc = Callable[[Any], Any]
+
+# Example transformer signatures:
+def string_transformer(value: Any) -> str: ...
+def datetime_transformer(value: datetime) -> str: ...
+def list_transformer(value: list) -> str: ...
 ```
 
 # Examples

@@ -4,7 +4,8 @@ from typing import Optional, Type, cast
 from httpx import Response
 from pydantic import BaseModel, PrivateAttr, TypeAdapter
 
-from .utils import T, pydantic_xml
+from .utils import T
+from .xml import pydantic_xml
 
 
 class ResponseModel(BaseModel):

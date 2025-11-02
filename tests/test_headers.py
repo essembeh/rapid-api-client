@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Annotated
 
 from pydantic import ValidationError
@@ -150,3 +151,44 @@ async def test_header_validation():
     for bad_value in ["foobar", "fooo", 42, None]:
         with raises(ValidationError):
             await api.test(bad_value)
+
+
+@mark.asyncio(loop_scope="module")
+async def test_header_transformer():
+    class HttpBinApi(RapidApi):
+        @get("/anything")
+        async def test_default(
+            self, myheader: Annotated[datetime, Header()]
+        ) -> Infos: ...
+
+        @get("/anything")
+        async def test_custom(
+            self,
+            myheader: Annotated[datetime, Header(transformer=lambda x: x.isoformat())],
+        ) -> Infos: ...
+
+        @get("/anything")
+        async def test_foo(
+            self, myheader: Annotated[datetime, Header(transformer=lambda x: "foo")]
+        ) -> Infos: ...
+
+    api = HttpBinApi(base_url=BASE_URL)
+
+    mydate = datetime(
+        year=2020,
+        month=12,
+        day=30,
+        hour=14,
+        minute=42,
+        second=12,
+        tzinfo=timezone.utc,
+    )
+
+    resp_default = await api.test_default(mydate)
+    assert resp_default.headers.get("Myheader") == ["2020-12-30 14:42:12+00:00"]
+
+    resp_custom = await api.test_custom(mydate)
+    assert resp_custom.headers.get("Myheader") == ["2020-12-30T14:42:12+00:00"]
+
+    resp_foo = await api.test_foo(mydate)
+    assert resp_foo.headers.get("Myheader") == ["foo"]

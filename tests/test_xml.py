@@ -1,3 +1,4 @@
+from functools import partial
 from typing import Annotated, Optional
 
 from pydantic_xml import BaseXmlModel, attr, element
@@ -66,11 +67,12 @@ async def test_body_pydanticxml_serializer():
             body: Annotated[
                 Data,
                 PydanticXmlBody(
-                    model_serializer_options={
-                        "skip_empty": False,
-                        "exclude_none": False,
-                        "exclude_unset": False,
-                    }
+                    transformer=partial(
+                        BaseXmlModel.to_xml,
+                        skip_empty=False,
+                        exclude_none=False,
+                        exclude_unset=False,
+                    )
                 ),
             ],
         ) -> Infos: ...
@@ -81,11 +83,12 @@ async def test_body_pydanticxml_serializer():
             body: Annotated[
                 Data,
                 PydanticXmlBody(
-                    model_serializer_options={
-                        "skip_empty": True,
-                        "exclude_none": False,
-                        "exclude_unset": False,
-                    }
+                    transformer=partial(
+                        BaseXmlModel.to_xml,
+                        skip_empty=True,
+                        exclude_none=False,
+                        exclude_unset=False,
+                    )
                 ),
             ],
         ) -> Infos: ...
@@ -96,11 +99,12 @@ async def test_body_pydanticxml_serializer():
             body: Annotated[
                 Data,
                 PydanticXmlBody(
-                    model_serializer_options={
-                        "skip_empty": False,
-                        "exclude_none": True,
-                        "exclude_unset": False,
-                    }
+                    transformer=partial(
+                        BaseXmlModel.to_xml,
+                        skip_empty=False,
+                        exclude_none=True,
+                        exclude_unset=False,
+                    )
                 ),
             ],
         ) -> Infos: ...
@@ -111,11 +115,12 @@ async def test_body_pydanticxml_serializer():
             body: Annotated[
                 Data,
                 PydanticXmlBody(
-                    model_serializer_options={
-                        "skip_empty": False,
-                        "exclude_none": False,
-                        "exclude_unset": True,
-                    }
+                    transformer=partial(
+                        BaseXmlModel.to_xml,
+                        skip_empty=False,
+                        exclude_none=False,
+                        exclude_unset=True,
+                    )
                 ),
             ],
         ) -> Infos: ...
