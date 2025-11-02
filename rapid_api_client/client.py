@@ -12,9 +12,12 @@ They work together with the decorator module to provide a declarative way
 to define API clients.
 """
 
+from contextlib import asynccontextmanager, contextmanager
 from typing import (
     Any,
+    AsyncGenerator,
     Dict,
+    Generator,
 )
 
 from httpx import AsyncClient, Client, Request
@@ -65,35 +68,49 @@ class RapidApi:
         self._async_client: AsyncClient | None = async_client
         self.client_factory_args: Dict[str, Any] = kwargs
 
-    @property
-    def client(self) -> Client:
+    @contextmanager
+    def sync_client(self) -> Generator[Client, None, None]:
         """
-        Get the synchronous HTTP client.
-
-        If no client was provided in the constructor, a new one is created
-        using the arguments provided in the constructor.
-
-        Returns:
-            The httpx.Client instance for making synchronous requests
+        Context manager that provides access to an httpx.Client instance.
+        
+        If a client was provided during initialization, yields that existing client.
+        Otherwise, creates a new client using the factory arguments and ensures
+        proper cleanup when the context exits.
+        
+        Yields:
+            Client: An httpx.Client instance for making synchronous HTTP requests
+            
+        Example:
+            with api.sync_client() as client:
+                response = client.get("/endpoint")
         """
-        if self._client is None:
-            self._client = Client(**self.client_factory_args)
-        return self._client
+        if self._client:
+            yield self._client
+        else:
+            with Client(**self.client_factory_args) as client:
+                yield client
 
-    @property
-    def async_client(self) -> AsyncClient:
+    @asynccontextmanager
+    async def async_client(self) -> AsyncGenerator[AsyncClient, None]:
         """
-        Get the asynchronous HTTP client.
-
-        If no async client was provided in the constructor, a new one is created
-        using the arguments provided in the constructor.
-
-        Returns:
-            The httpx.AsyncClient instance for making asynchronous requests
+        Async context manager that provides access to an httpx.AsyncClient instance.
+        
+        If an async client was provided during initialization, yields that existing client.
+        Otherwise, creates a new async client using the factory arguments and ensures
+        proper cleanup when the context exits.
+        
+        Yields:
+            AsyncClient: An httpx.AsyncClient instance for making asynchronous HTTP requests
+            
+        Example:
+            async with api.async_client() as client:
+                response = await client.get("/endpoint")
         """
-        if self._async_client is None:
-            self._async_client = AsyncClient(**self.client_factory_args)
-        return self._async_client
+        if self._async_client:
+            yield self._async_client
+        else:
+            async with AsyncClient(**self.client_factory_args) as async_client:
+                yield async_client
 
     def _request_update(self, request: Request):
         """

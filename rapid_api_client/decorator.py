@@ -17,9 +17,9 @@ sending the requests, and processing the responses.
 import inspect
 from functools import partial, wraps
 from inspect import signature
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, Optional, Type, Union
 
-from httpx import Response
+from httpx import AsyncClient, Client, Response
 
 from .client import RapidApi
 from .parameters import ParameterManager
@@ -73,7 +73,9 @@ def http(
         )
         is_async = inspect.iscoroutinefunction(func)
 
-        def prepare_request(api: RapidApi, args, kwargs):
+        def prepare_request(
+            api: RapidApi, client: Union[Client, AsyncClient], args, kwargs
+        ):
             assert isinstance(api, RapidApi), f"{api} should be an instance of RapidApi"
 
             # valuate arguments from args and kwargs
@@ -98,11 +100,7 @@ def http(
                 for k, v in headers.items():
                     build_kwargs["headers"].setdefault(k, v)
 
-            out = (
-                api.async_client.build_request(method, resolved_path, **build_kwargs)
-                if is_async
-                else api.client.build_request(method, resolved_path, **build_kwargs)
-            )
+            out = client.build_request(method, resolved_path, **build_kwargs)
             # call the method allowing the client to update the request before sending it
             if not skip_request_update:
                 api._request_update(out)
@@ -110,19 +108,21 @@ def http(
 
         @wraps(func)
         async def async_wrapper(api: RapidApi, *args, **kwargs):
-            request = prepare_request(api, args, kwargs)
-            response = await api.async_client.send(request)
-            return process_response(
-                response, response_class, raise_for_status=raise_for_status
-            )
+            async with api.async_client() as async_client:
+                request = prepare_request(api, async_client, args, kwargs)
+                response = await async_client.send(request)
+                return process_response(
+                    response, response_class, raise_for_status=raise_for_status
+                )
 
         @wraps(func)
         def wrapper(api: RapidApi, *args, **kwargs):
-            request = prepare_request(api, args, kwargs)
-            response = api.client.send(request)
-            return process_response(
-                response, response_class, raise_for_status=raise_for_status
-            )
+            with api.sync_client() as sync_client:
+                request = prepare_request(api, sync_client, args, kwargs)
+                response = sync_client.send(request)
+                return process_response(
+                    response, response_class, raise_for_status=raise_for_status
+                )
 
         return async_wrapper if is_async else wrapper
 
