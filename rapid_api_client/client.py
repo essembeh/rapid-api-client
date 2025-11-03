@@ -13,14 +13,24 @@ to define API clients.
 """
 
 from contextlib import asynccontextmanager, contextmanager
+from inspect import isclass
 from typing import (
     Any,
     AsyncGenerator,
     Dict,
     Generator,
+    Optional,
+    Type,
+    Union,
+    cast,
 )
 
-from httpx import AsyncClient, Client, Request
+from httpx import AsyncClient, Client, Request, Response
+from pydantic import BaseModel, TypeAdapter
+
+from .response import ResponseModel
+from .utils import T
+from .xml import pydantic_xml
 
 
 class RapidApi:
@@ -72,14 +82,14 @@ class RapidApi:
     def sync_client(self) -> Generator[Client, None, None]:
         """
         Context manager that provides access to an httpx.Client instance.
-        
+
         If a client was provided during initialization, yields that existing client.
         Otherwise, creates a new client using the factory arguments and ensures
         proper cleanup when the context exits.
-        
+
         Yields:
             Client: An httpx.Client instance for making synchronous HTTP requests
-            
+
         Example:
             with api.sync_client() as client:
                 response = client.get("/endpoint")
@@ -94,14 +104,14 @@ class RapidApi:
     async def async_client(self) -> AsyncGenerator[AsyncClient, None]:
         """
         Async context manager that provides access to an httpx.AsyncClient instance.
-        
+
         If an async client was provided during initialization, yields that existing client.
         Otherwise, creates a new async client using the factory arguments and ensures
         proper cleanup when the context exits.
-        
+
         Yields:
             AsyncClient: An httpx.AsyncClient instance for making asynchronous HTTP requests
-            
+
         Example:
             async with api.async_client() as client:
                 response = await client.get("/endpoint")
@@ -112,11 +122,116 @@ class RapidApi:
             async with AsyncClient(**self.client_factory_args) as async_client:
                 yield async_client
 
-    def _request_update(self, request: Request):
+    def build_request(
+        self, client: Union[Client, AsyncClient], *, method: str, url: str, **kwargs
+    ) -> Request:
         """
-        Allow subclasses to update the request id needed. For example to add a signature.
+        Build an HTTP request using the provided client.
+
+        This method constructs an httpx.Request object that can be used to make
+        HTTP requests. It delegates to the underlying httpx client's build_request
+        method while providing a consistent interface for both sync and async clients.
 
         Args:
-            request: the request just before sending to the client
+            client: The httpx Client or AsyncClient instance to use for building the request
+            method: The HTTP method (GET, POST, PUT, DELETE, etc.)
+            url: The target URL for the request
+            **kwargs: Additional keyword arguments to pass to the client's build_request method.
+                     Common arguments include:
+                     - params: Query parameters to include in the URL
+                     - headers: HTTP headers to include in the request
+                     - json: JSON data to send in the request body
+                     - data: Form data or raw data to send in the request body
+                     - files: Files to upload in the request
+
+        Returns:
+            Request: An httpx.Request object ready to be sent
+
+        Example:
+            with api.sync_client() as client:
+                request = api.build_request(
+                    client,
+                    method="GET",
+                    url="/users/123",
+                    params={"include": "profile"}
+                )
         """
-        pass
+        return client.build_request(method=method, url=url, **kwargs)
+
+    def process_response(
+        self,
+        response: Response,
+        response_class: Type[T],
+        raise_for_status: Optional[bool] = None,
+    ) -> T:
+        """
+        Process an HTTP response and convert it to the specified type.
+
+        This method handles the conversion of raw HTTP responses into typed Python objects.
+        It supports various response types including Pydantic models, XML models (via pydantic-xml),
+        raw strings, bytes, and httpx.Response objects.
+
+        Args:
+            response: The httpx.Response object to process
+            response_class: The target type to convert the response to. Supported types include:
+                          - httpx.Response: Returns the raw response object
+                          - str: Returns the response text content
+                          - bytes: Returns the response content as bytes
+                          - Pydantic BaseModel subclasses: Parses JSON response into model
+                          - pydantic-xml BaseXmlModel subclasses: Parses XML response into model
+                          - Other types: Uses TypeAdapter for JSON parsing
+            raise_for_status: Whether to raise an exception for HTTP error status codes.
+                            - True: Always check status and raise on errors
+                            - False: Never check status
+                            - None (default): Check status for all types except raw Response
+
+        Returns:
+            The processed response converted to the specified type
+
+        Raises:
+            HTTPStatusError: When raise_for_status is True and the response has an error status code
+            ValidationError: When the response content cannot be parsed into the specified type
+            ValueError: When the response format doesn't match the expected type
+
+        Example:
+            response = client.get("/users/123")
+            user = api.process_response(response, UserModel)
+
+            # For raw response handling
+            raw_response = api.process_response(response, Response, raise_for_status=False)
+        """
+        if response_class is Response:
+            # In case of Response, only check status if explicitly asked
+            if raise_for_status is True:
+                response.raise_for_status()
+            return cast(T, response)
+
+        # For other types than Response, check if the response status code indicates an error
+        if raise_for_status is not False:
+            response.raise_for_status()
+
+        # In case of a string or bytes, return the response content
+        if response_class is str:
+            return cast(T, response.text)
+        if response_class is bytes:
+            return cast(T, response.content)
+
+        out = None
+        if (
+            pydantic_xml is not None
+            and isclass(response_class)
+            and issubclass(response_class, pydantic_xml.BaseXmlModel)
+        ):
+            # Check if pydantic-xml is installed and if the response class is a pydantic-xml model
+            out = response_class.from_xml(response.content)
+        elif isclass(response_class) and issubclass(response_class, BaseModel):
+            # Check if the response class is a pydantic model
+            out = response_class.model_validate_json(response.content)
+        else:
+            # Fallback to TypeAdapter for other types
+            out = TypeAdapter(response_class).validate_json(response.content)
+
+        # Check if the response class is a subclass of ResponseModel to set the response private attribute
+        if isinstance(out, ResponseModel):
+            out._response = response
+        return cast(T, out)

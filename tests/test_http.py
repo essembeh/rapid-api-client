@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from httpx import AsyncClient, ReadTimeout, Request
+from httpx import AsyncClient, ReadTimeout
 from pytest import mark, raises
 
 from rapid_api_client import Path, RapidApi, delete, get, patch, post, put
@@ -87,20 +87,24 @@ async def test_http_timeout():
 
 @mark.asyncio(loop_scope="module")
 async def test_request_update():
-    class HttpBinApi(RapidApi):
-        def _request_update(self, request: Request):
+    class HttpBinApiWithUpdate(RapidApi):
+        def build_request(self, client, *, method: str, url: str, **kwargs):
+            request = super().build_request(client, method=method, url=url, **kwargs)
             request.headers["Myheader"] = "foo"
+            return request
 
         @get("/anything")
         async def with_update(self) -> Infos: ...
 
-        @get("/anything", skip_request_update=True)
+    class HttpBinApiWithoutUpdate(RapidApi):
+        @get("/anything")
         async def without_update(self) -> Infos: ...
 
-    api = HttpBinApi(base_url=BASE_URL)
+    api_with = HttpBinApiWithUpdate(base_url=BASE_URL)
+    api_without = HttpBinApiWithoutUpdate(base_url=BASE_URL)
 
-    resp1 = await api.with_update()
+    resp1 = await api_with.with_update()
     assert resp1.headers.get("Myheader") == ["foo"]
 
-    resp2 = await api.without_update()
+    resp2 = await api_without.without_update()
     assert resp2.headers.get("Myheader") is None

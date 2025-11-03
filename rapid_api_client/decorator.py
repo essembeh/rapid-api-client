@@ -23,7 +23,6 @@ from httpx import AsyncClient, Client, Response
 
 from .client import RapidApi
 from .parameters import ParameterManager
-from .response import process_response
 
 
 def http(
@@ -32,7 +31,6 @@ def http(
     timeout: float | None = None,
     headers: Dict[str, str] | None = None,
     raise_for_status: Optional[bool] = None,
-    skip_request_update: bool = False,
 ) -> Any:
     """
     Main decorator used to generate an HTTP request and return its result.
@@ -51,7 +49,6 @@ def http(
         timeout: Optional timeout for the request in seconds
         headers: Optional additional headers to include in the request
         raise_for_status: Whether to raise an exception for non-2xx status codes
-        skip_request_update: To skip calling RapidApi._request_update before sending
 
     Returns:
         A decorator function that wraps the API endpoint method
@@ -100,18 +97,16 @@ def http(
                 for k, v in headers.items():
                     build_kwargs["headers"].setdefault(k, v)
 
-            out = client.build_request(method, resolved_path, **build_kwargs)
-            # call the method allowing the client to update the request before sending it
-            if not skip_request_update:
-                api._request_update(out)
-            return out
+            return api.build_request(
+                client, method=method, url=resolved_path, **build_kwargs
+            )
 
         @wraps(func)
         async def async_wrapper(api: RapidApi, *args, **kwargs):
             async with api.async_client() as async_client:
                 request = prepare_request(api, async_client, args, kwargs)
                 response = await async_client.send(request)
-                return process_response(
+                return api.process_response(
                     response, response_class, raise_for_status=raise_for_status
                 )
 
@@ -120,7 +115,7 @@ def http(
             with api.sync_client() as sync_client:
                 request = prepare_request(api, sync_client, args, kwargs)
                 response = sync_client.send(request)
-                return process_response(
+                return api.process_response(
                     response, response_class, raise_for_status=raise_for_status
                 )
 
