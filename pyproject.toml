@@ -1,12 +1,11 @@
 [project]
 name = "rapid-api-client"
-
-[tool.poetry]
-name = "rapid-api-client"
 version = "0.8.5"
 description = "Rapidly develop your API clients using decorators and annotations"
-authors = ["Sébastien MB <seb@essembeh.org>"]
 readme = "README.md"
+authors = [
+    { name = "Sébastien MB", email = "seb@essembeh.org" }
+]
 classifiers = [
     "Intended Audience :: Information Technology",
     "Intended Audience :: System Administrators",
@@ -30,26 +29,27 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Topic :: Internet :: WWW/HTTP",
 ]
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.27,<1.0",
+    "pydantic>=2.10,<3.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/essembeh/rapid-api-client"
 Repository = "https://github.com/essembeh/rapid-api-client"
 Issues = "https://github.com/essembeh/rapid-api-client/issues"
 
-[tool.poetry.dependencies]
-python = "^3.11"
-pydantic = "2.*"
-httpx = "0.*"
-
-[tool.poetry.group.dev.dependencies]
-pytest = "*"
-pytest-asyncio = "*"
-pytest-cov = "*"
-pytest-dotenv = {extras = ["cli"], version = "*"}
-pydantic-xml = "*"
-mypy = "*"
-pylint = "*"
-
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.7.22,<0.8"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.18.2",
+    "pydantic-xml>=2.18.0",
+    "pylint>=4.0.2",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "pytest-cov>=7.0.0",
+]

@@ -16,14 +16,14 @@ jobs:
           fail-fast: false
           python-version: ${{ matrix.python-version }}
           cache: "pip"
-      - name: Install poetry
-        run: pip install poetry
+      - name: Install uv
+        run: pip install uv
       - name: Test app
         run: |
-          poetry install --no-interaction
-          poetry run -- pytest --cov=rapid_api_client tests/
-          poetry run -- coverage report
-          poetry run -- coverage xml
+          uv sync --frozen
+          uv run -- pytest --cov=rapid_api_client tests/
+          uv run -- coverage report
+          uv run -- coverage xml
 
   publish:
     name: Publish App on PyPI
@@ -35,9 +35,11 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install poetry
-        run: pip install poetry
+      - name: Install uv
+        run: pip install uv
       - name: Publish app
         env:
-          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
-        run: poetry publish --no-interaction --build --username "__token__" --password "$PYPI_TOKEN"
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          uv build
+          uv publish

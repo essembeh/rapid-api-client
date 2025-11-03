@@ -1,7 +1,7 @@
 ![Github](https://img.shields.io/github/tag/essembeh/rapid-api-client.svg)
 ![PyPi](https://img.shields.io/pypi/v/rapid-api-client.svg)
 ![Python](https://img.shields.io/pypi/pyversions/rapid-api-client.svg)
-![CI](https://github.com/essembeh/rapid-api-client/actions/workflows/poetry.yml/badge.svg)
+![CI](https://github.com/essembeh/rapid-api-client/actions/workflows/build.yml/badge.svg)
 
 > 🙏 As a Python Backend developer, I've wasted so much time in recent years writing the same API clients over and over using [Requests](https://requests.readthedocs.io/) or [HTTPX](https://www.python-httpx.org/). At the same time, I could be so efficient by using [FastAPI](https://fastapi.tiangolo.com/) for API servers. I just wanted to save time for my upcoming projects, thinking that other developers might find it useful too.
 
@@ -28,8 +28,12 @@ First, install `rapid-api-client`:
 # to install the latest version using pip
 pip install rapid-api-client
 
-# or add it to your `pyproject.toml` file using poetry
+# or if your project is using uv
+uv add rapid-api-client
+
+# or if your project is using poetry
 poetry add rapid-api-client
+
 ```
 
 Then, declare your API client using *decorators* and *annotations*:
