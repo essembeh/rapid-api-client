@@ -19,15 +19,16 @@ from typing import (
     Dict,
     Generic,
     List,
+    Optional,
     Self,
     Tuple,
 )
 
 from pydantic import TypeAdapter
+from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
 from .annotations import (
-    BaseAnnotation,
     Body,
     FileBody,
     FormBody,
@@ -37,12 +38,13 @@ from .annotations import (
     PydanticBody,
     PydanticXmlBody,
     Query,
+    RapidAnnotation,
 )
-from .utils import BA, filter_none_values, find_annotation
+from .utils import RA, filter_none_values, find_annotation
 
 
-@dataclass
-class RapidParameter(Generic[BA]):
+@dataclass(slots=True, frozen=True)
+class RapidParameter(Generic[RA]):
     """
     Represents a function parameter with its associated annotation.
 
@@ -51,11 +53,13 @@ class RapidParameter(Generic[BA]):
 
     Attributes:
         param: The function parameter
-        annot: The annotation associated with the parameter
+        rapid_annotation: The annotation associated with the parameter
+        fieldinfo_annotation: The optional Pydantic annotation
     """
 
-    param: Parameter
-    annot: BA
+    parameter: Parameter
+    rapid_annotation: RA
+    fieldinfo_annotation: Optional[FieldInfo]
 
     @property
     def name(self) -> str:
@@ -65,35 +69,33 @@ class RapidParameter(Generic[BA]):
         Returns:
             The name of the parameter as defined in the function signature
         """
-        return self.param.name
+        return self.parameter.name
 
-    def get_name(self, use_alias: bool = True) -> str:
+    def get_name(self) -> str:
         """
-        Get the parameter name, using the alias if available and requested.
-
-        Args:
-            use_alias: Whether to use the alias defined in the annotation if available
+        Get the parameter name, using the alias if available
 
         Returns:
             The parameter name or its alias
         """
-        if use_alias and self.annot.alias:
-            return self.annot.alias
+        if self.rapid_annotation.alias:
+            return self.rapid_annotation.alias
+        if self.fieldinfo_annotation and self.fieldinfo_annotation.alias:
+            return self.fieldinfo_annotation.alias
         return self.name
 
-    def get_value(self, ba: BoundArguments, *, validate: bool = True) -> Any:
+    def get_value(self, ba: BoundArguments) -> Any:
         """
         Get the parameter value from bound arguments.
 
         This method retrieves the parameter value from the bound arguments,
         or uses the default value if the parameter is not in the arguments.
-        It can also validate the value against the parameter's type annotation.
+        The value is validated against the parameter's type annotation.
         The value is then transformed using the annotation's transformer function
         if one is defined.
 
         Args:
             ba: The bound arguments from the function call
-            validate: Whether to validate the value against the parameter's type annotation
 
         Returns:
             The parameter value, optionally transformed by the annotation's transformer
@@ -104,22 +106,23 @@ class RapidParameter(Generic[BA]):
         out = None
         if self.name in ba.arguments:
             out = ba.arguments.get(self.name)
-        else:
+        elif self.fieldinfo_annotation:
             # Use pydantic default value if available
-            out = self.annot.get_default(call_default_factory=True)
+            out = self.fieldinfo_annotation.get_default(call_default_factory=True)
             if out is PydanticUndefined:
                 raise ValueError(f"Missing value for parameter {self.name}")
 
-        if validate:
-            out = TypeAdapter(self.param.annotation).validate_python(out)
+        # Use pydantic to validate the value
+        out = TypeAdapter(self.parameter.annotation).validate_python(out)
 
-        if out is not None:
-            out = self.annot.transform_value(out)
+        # If the value is not null and a transformer is set, use it
+        if out is not None and self.rapid_annotation.transformer:
+            out = self.rapid_annotation.transformer(out)
 
         return out
 
 
-@dataclass
+@dataclass(slots=True, frozen=True)
 class ParameterManager:
     """
     Class containing all custom parameters used to build the request.
@@ -160,33 +163,68 @@ class ParameterManager:
         """
         out = cls()
         for parameter in sig.parameters.values():
-            annot: BaseAnnotation | None = None
-            if (annot := find_annotation(parameter, Path)) is not None:
-                out.path_parameters.append(RapidParameter(parameter, annot))
-            if (annot := find_annotation(parameter, Query)) is not None:
-                out.query_parameters.append(RapidParameter(parameter, annot))
-            if (annot := find_annotation(parameter, Header)) is not None:
-                out.header_parameters.append(RapidParameter(parameter, annot))
-            if (annot := find_annotation(parameter, Body)) is not None:
-                out.body_parameters.append(RapidParameter(parameter, annot))
+            if rapid_annotation := find_annotation(parameter, RapidAnnotation):
+                fieldinfo_annotation = find_annotation(parameter, FieldInfo)
+                if isinstance(rapid_annotation, Path):
+                    out.path_parameters.append(
+                        RapidParameter(
+                            parameter=parameter,
+                            rapid_annotation=rapid_annotation,
+                            fieldinfo_annotation=fieldinfo_annotation,
+                        )
+                    )
+                elif isinstance(rapid_annotation, Query):
+                    out.query_parameters.append(
+                        RapidParameter(
+                            parameter=parameter,
+                            rapid_annotation=rapid_annotation,
+                            fieldinfo_annotation=fieldinfo_annotation,
+                        )
+                    )
+                elif isinstance(rapid_annotation, Header):
+                    out.header_parameters.append(
+                        RapidParameter(
+                            parameter=parameter,
+                            rapid_annotation=rapid_annotation,
+                            fieldinfo_annotation=fieldinfo_annotation,
+                        )
+                    )
+                elif isinstance(rapid_annotation, Body):
+                    out.body_parameters.append(
+                        RapidParameter(
+                            parameter=parameter,
+                            rapid_annotation=rapid_annotation,
+                            fieldinfo_annotation=fieldinfo_annotation,
+                        )
+                    )
+                else:
+                    raise ValueError(
+                        f"Invalid parameter annotation: {rapid_annotation}"
+                    )
 
         # consistency check for body parameters
         if len(out.body_parameters) > 0:
             first_body_param = out.body_parameters[0]
-            if isinstance(first_body_param.annot, FileBody):
+            if isinstance(first_body_param.rapid_annotation, FileBody):
                 # FileBody: check 1+ parameters of type FileBody
                 assert all(
-                    map(lambda p: isinstance(p.annot, FileBody), out.body_parameters)
+                    map(
+                        lambda p: isinstance(p.rapid_annotation, FileBody),
+                        out.body_parameters,
+                    )
                 ), "All body parameters must be of type FileBody"
-            elif isinstance(first_body_param.annot, FormBody):
+            elif isinstance(first_body_param.rapid_annotation, FormBody):
                 # FormBody: check 1+ parameters of type FormBody
                 assert all(
-                    map(lambda p: isinstance(p.annot, FormBody), out.body_parameters)
+                    map(
+                        lambda p: isinstance(p.rapid_annotation, FormBody),
+                        out.body_parameters,
+                    )
                 ), "All body parameters must be of type FormBody"
-            elif isinstance(first_body_param.annot, JsonBody):
+            elif isinstance(first_body_param.rapid_annotation, JsonBody):
                 # JsonBody: check 1 parameter of type JsonBody
                 assert len(out.body_parameters) == 1, "Only one JsonBody allowed"
-            elif isinstance(first_body_param.annot, Body):
+            elif isinstance(first_body_param.rapid_annotation, Body):
                 # Body: check 1 parameter of type Body
                 assert len(out.body_parameters) == 1, "Only one Body allowed"
 
@@ -259,14 +297,14 @@ class ParameterManager:
         if len(self.body_parameters) > 0:
             first_body_param = self.body_parameters[0]
 
-            if isinstance(first_body_param.annot, FileBody):
+            if isinstance(first_body_param.rapid_annotation, FileBody):
                 # there are one or more files
                 values = filter_none_values(
                     {p.get_name(): p.get_value(ba) for p in self.body_parameters}
                 )
                 if len(values) > 0:
                     return "files", values
-            elif isinstance(first_body_param.annot, FormBody):
+            elif isinstance(first_body_param.rapid_annotation, FormBody):
                 # there are one or more form parameters
                 values = {}
 
@@ -285,11 +323,13 @@ class ParameterManager:
 
                 if len(values) > 0:
                     return "data", values
-            elif isinstance(first_body_param.annot, (PydanticXmlBody, PydanticBody)):
+            elif isinstance(
+                first_body_param.rapid_annotation, (PydanticXmlBody, PydanticBody)
+            ):
                 # there is one PydanticXmlBody or PydanticBody parameter
                 if (value := first_body_param.get_value(ba)) is not None:
                     return "content", value
-            elif isinstance(first_body_param.annot, JsonBody):
+            elif isinstance(first_body_param.rapid_annotation, JsonBody):
                 # there is one JsonBody parameter
                 if (value := first_body_param.get_value(ba)) is not None:
                     assert isinstance(value, dict)

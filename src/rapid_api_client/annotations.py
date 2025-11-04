@@ -15,54 +15,56 @@ This module provides annotation classes used to customize API requests:
 These annotations are used with Python's Annotated type to mark parameters
 in API endpoint methods, indicating how they should be processed when
 building HTTP requests.
+
+For Pydantic behavior like defaults, validation, or aliases, use a separate
+pydantic.Field() annotation alongside the rapid-api-client annotation:
+
+    param: Annotated[str, Query(), Field(default="value", pattern="[a-z]+")]
+
+This dual annotation system provides better separation of concerns and full
+compatibility with Pydantic v2's validation system.
 """
 
+from dataclasses import dataclass, field
 from functools import partial
 from typing import Any, Callable, Optional
 
 from pydantic import BaseModel
-from pydantic.fields import FieldInfo
 
 from .xml import pydantic_xml_transformer
 
 
-class BaseAnnotation(FieldInfo):
+@dataclass(slots=True)
+class RapidAnnotation:
     """
     Base class for annotations used to customize the request build.
 
-    This class extends Pydantic's FieldInfo to provide a foundation for
-    all request-related annotations in the rapid_api_client library.
-    All specific annotation types (Path, Query, Header, Body, etc.) inherit
-    from this class.
+    This class provides a foundation for all request-related annotations in the
+    rapid_api_client library. All specific annotation types (Path, Query, Header,
+    Body, etc.) inherit from this class.
+
+    For Pydantic behavior like default values, validation, or aliases, use a separate
+    pydantic.Field() annotation alongside the rapid-api-client annotation:
+
+        param: Annotated[str, Query(), Field(default="value", pattern="[a-z]+")]
 
     Attributes:
+        alias: Optional alternative name for the parameter when building requests
         transformer: Optional callable that transforms the parameter value before
                     it's used in the request. If None, no transformation is applied.
-        Inherits all attributes from pydantic.fields.FieldInfo, including:
-        - default: Default value for the field
-        - default_factory: Callable that returns a default value
-        - alias: Alternative name for the field
 
     Args:
+        alias: Optional alternative name for the parameter
         transformer: Optional function to transform the parameter value.
                     Should accept Any and return Any.
     """
 
-    __slots__ = ("transformer",)
-
-    def __init__(
-        self, *args, transformer: Optional[Callable[[Any], Any]] = None, **kwargs
-    ):
-        super().__init__(*args, **kwargs)
-        self.transformer = transformer
-
-    def transform_value(self, value: Any) -> Any:
-        if self.transformer:
-            return self.transformer(value)
-        return value
+    alias: Optional[str] = field(default=None)
+    transformer: Optional[Callable[[Any], Any]] = field(default=None)
 
 
-class Path(BaseAnnotation):
+@dataclass(slots=True)
+class Path(RapidAnnotation):
     """
     Annotation to declare an argument used to resolve the API path/URL.
 
@@ -70,18 +72,32 @@ class Path(BaseAnnotation):
     should be substituted into the URL path. By default, values are converted
     to strings using the built-in str() function.
 
+    For Pydantic validation or behavior, add a Field() annotation:
+        param: Annotated[str, Path(), Field(pattern="[a-z]+")]
+
     Args:
+        alias: Optional alternative name for the path parameter
         transformer: Optional function to transform the parameter value before
                     URL substitution. Defaults to str() for string conversion.
 
     Example:
-        >>> from typing import Annotated
+        >>> from typing import Annotated, Literal
+        >>> from pydantic import Field
         >>> from rapid_api_client import RapidApi, Path, get
         >>>
         >>> class MyApi(RapidApi):
         ...     @get("/users/{user_id}")
         ...     def get_user(self, user_id: Annotated[int, Path()]): ...
         ...
+        ...     # With validation using Field()
+        ...     @get("/users/{status}")
+        ...     def get_by_status(self, status: Annotated[Literal["active", "inactive"], Path()]): ...
+        ...
+        ...     # With pattern validation
+        ...     @get("/users/{username}")
+        ...     def get_by_username(self, username: Annotated[str, Path(), Field(pattern="[a-z]+")]): ...
+        ...
+        ...     # With custom transformer
         ...     @get("/events/{event_date}")
         ...     def get_events(self, event_date: Annotated[datetime, Path(transformer=lambda x: x.isoformat())]): ...
         >>>
@@ -90,12 +106,13 @@ class Path(BaseAnnotation):
         >>> events = api.get_events(datetime.now())  # Uses ISO format for date
     """
 
-    def __init__(self, *args, **kwargs):
-        kwargs.setdefault("transformer", str)
-        super().__init__(*args, **kwargs)
+    def __post_init__(self):
+        if self.transformer is None:
+            self.transformer = str
 
 
-class Query(BaseAnnotation):
+@dataclass(slots=True)
+class Query(RapidAnnotation):
     """
     Annotation to declare an argument used as a query parameter.
 
@@ -103,18 +120,40 @@ class Query(BaseAnnotation):
     should be added to the URL as query parameters. By default, values are
     converted to strings using the built-in str() function.
 
+    For Pydantic behavior like defaults or validation, add a Field() annotation:
+        param: Annotated[str, Query(), Field(default="value", max_length=10)]
+
     Args:
+        alias: Optional alternative name for the query parameter
         transformer: Optional function to transform the parameter value before
                     adding to query string. Defaults to str() for string conversion.
 
     Example:
-        >>> from typing import Annotated
+        >>> from typing import Annotated, Literal
+        >>> from pydantic import Field
         >>> from rapid_api_client import RapidApi, Query, get
         >>>
         >>> class MyApi(RapidApi):
         ...     @get("/search")
-        ...     def search(self, q: Annotated[str, Query()], page: Annotated[int, Query()] = 1): ...
+        ...     def search(
+        ...         self,
+        ...         q: Annotated[str, Query()],
+        ...         page: Annotated[int, Query()] = 1
+        ...     ): ...
         ...
+        ...     # With Pydantic default value
+        ...     @get("/items")
+        ...     def get_items(self, limit: Annotated[int, Query(), Field(default=10)]): ...
+        ...
+        ...     # With validation
+        ...     @get("/users")
+        ...     def get_users(self, status: Annotated[Literal["active", "inactive"], Query()]): ...
+        ...
+        ...     # With pattern validation
+        ...     @get("/search")
+        ...     def search_validated(self, q: Annotated[str, Query(), Field(max_length=100)]): ...
+        ...
+        ...     # With custom transformer
         ...     @get("/events")
         ...     def get_events(self, date: Annotated[datetime, Query(transformer=lambda x: x.isoformat())]): ...
         >>>
@@ -123,12 +162,13 @@ class Query(BaseAnnotation):
         >>> events = api.get_events(datetime.now())  # Uses ISO format for date parameter
     """
 
-    def __init__(self, *args, **kwargs):
-        kwargs.setdefault("transformer", str)
-        super().__init__(*args, **kwargs)
+    def __post_init__(self):
+        if self.transformer is None:
+            self.transformer = str
 
 
-class Header(BaseAnnotation):
+@dataclass(slots=True)
+class Header(RapidAnnotation):
     """
     Annotation to declare an argument used as a request header.
 
@@ -136,18 +176,32 @@ class Header(BaseAnnotation):
     should be added to the HTTP request headers. By default, values are
     converted to strings using the built-in str() function.
 
+    For Pydantic behavior like validation, add a Field() annotation:
+        param: Annotated[str, Header(), Field(pattern="Bearer .+")]
+
     Args:
+        alias: Optional alternative name for the header
         transformer: Optional function to transform the parameter value before
                     adding to headers. Defaults to str() for string conversion.
 
     Example:
-        >>> from typing import Annotated
+        >>> from typing import Annotated, Literal
+        >>> from pydantic import Field
         >>> from rapid_api_client import RapidApi, Header, get
         >>>
         >>> class MyApi(RapidApi):
         ...     @get("/protected")
         ...     def get_protected(self, authorization: Annotated[str, Header()]): ...
         ...
+        ...     # With validation
+        ...     @get("/api")
+        ...     def get_with_validation(self, auth: Annotated[str, Header(), Field(pattern="Bearer .+")]): ...
+        ...
+        ...     # With literal validation
+        ...     @get("/content")
+        ...     def get_content(self, accept: Annotated[Literal["application/json", "application/xml"], Header()]): ...
+        ...
+        ...     # With custom transformer
         ...     @get("/timestamp")
         ...     def get_with_timestamp(self, timestamp: Annotated[datetime, Header(transformer=lambda x: x.isoformat())]): ...
         >>>
@@ -156,12 +210,13 @@ class Header(BaseAnnotation):
         >>> data = api.get_with_timestamp(datetime.now())  # Uses ISO format for timestamp header
     """
 
-    def __init__(self, *args, **kwargs):
-        kwargs.setdefault("transformer", str)
-        super().__init__(*args, **kwargs)
+    def __post_init__(self):
+        if self.transformer is None:
+            self.transformer = str
 
 
-class Body(BaseAnnotation):
+@dataclass(slots=True)
+class Body(RapidAnnotation):
     """
     Annotation to declare an argument used as HTTP content for POST/PUT/PATCH requests.
 
@@ -181,6 +236,7 @@ class Body(BaseAnnotation):
     """
 
 
+@dataclass(slots=True)
 class JsonBody(Body):
     """
     Annotation to declare an argument used as JSON object for POST/PUT/PATCH requests.
@@ -202,6 +258,7 @@ class JsonBody(Body):
     """
 
 
+@dataclass(slots=True)
 class FormBody(Body):
     """
     Annotation to declare an argument used as URL-encoded form parameter.
@@ -236,6 +293,7 @@ class FormBody(Body):
     """
 
 
+@dataclass(slots=True)
 class FileBody(Body):
     """
     Annotation to declare an argument used as file to be uploaded.
@@ -257,6 +315,7 @@ class FileBody(Body):
     """
 
 
+@dataclass(slots=True)
 class PydanticBody(Body):
     """
     Annotation to declare a Pydantic model to be serialized to JSON and used as HTTP content.
@@ -296,14 +355,14 @@ class PydanticBody(Body):
         >>> response = api.create_user_custom(new_user)  # Uses custom serialization options
     """
 
-    def __init__(self, *args, **kwargs):
-        kwargs.setdefault(
-            "transformer",
-            partial(BaseModel.model_dump_json, by_alias=True, exclude_none=True),
-        )
-        super().__init__(*args, **kwargs)
+    def __post_init__(self):
+        if self.transformer is None:
+            self.transformer = partial(
+                BaseModel.model_dump_json, by_alias=True, exclude_none=True
+            )
 
 
+@dataclass(slots=True)
 class PydanticXmlBody(Body):
     """
     Annotation to declare a Pydantic XML model to be serialized to XML and used as HTTP content.
@@ -343,6 +402,6 @@ class PydanticXmlBody(Body):
         >>> response = api.create_user_custom(new_user)  # Uses custom serialization options
     """
 
-    def __init__(self, *args, **kwargs):
-        kwargs.setdefault("transformer", pydantic_xml_transformer)
-        super().__init__(*args, **kwargs)
+    def __post_init__(self):
+        if self.transformer is None:
+            self.transformer = pydantic_xml_transformer

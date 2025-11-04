@@ -36,7 +36,7 @@ async def test_bad_constructor():
 async def test_missing_parameter():
     class HttpBinApi(RapidApi):
         @get("/anything")
-        def test(self, header: Annotated[str, Header()]): ...
+        async def test(self, header: Annotated[str, Header()]): ...
 
     api = HttpBinApi(base_url=BASE_URL)
     with raises(ValueError):

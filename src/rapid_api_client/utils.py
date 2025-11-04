@@ -11,12 +11,14 @@ useful for advanced use cases.
 """
 
 from inspect import Parameter
-from typing import Any, Dict, Optional, Type, TypeVar, get_args
+from typing import Any, Dict, Optional, Type, TypeVar, Union, get_args, overload
 
-from .annotations import BaseAnnotation
+from pydantic.fields import FieldInfo
+
+from .annotations import RapidAnnotation
 
 T = TypeVar("T")
-BA = TypeVar("BA", bound=BaseAnnotation)
+RA = TypeVar("RA", bound=RapidAnnotation)
 
 
 def filter_none_values(values: Dict[str, Optional[Any]]) -> Dict[str, Any]:
@@ -43,7 +45,17 @@ def filter_none_values(values: Dict[str, Optional[Any]]) -> Dict[str, Any]:
     return {k: v for k, v in values.items() if v is not None}
 
 
-def find_annotation(param: Parameter, cls: Type[BA]) -> Optional[BA]:
+@overload
+def find_annotation(param: Parameter, cls: Type[RA]) -> Optional[RA]: ...
+
+
+@overload
+def find_annotation(param: Parameter, cls: Type[FieldInfo]) -> Optional[FieldInfo]: ...
+
+
+def find_annotation(
+    param: Parameter, cls: Union[Type[RA], Type[FieldInfo]]
+) -> Union[RA, FieldInfo, None]:
     """
     Find an annotation of a specific type in a parameter's annotation.
 

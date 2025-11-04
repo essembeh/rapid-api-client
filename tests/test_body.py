@@ -25,14 +25,12 @@ async def test_body_str():
         async def test(
             self,
             body: Annotated[str, Body()],
-            content_type: Annotated[
-                str, Header(alias="content-type", default="text/plain")
-            ],
+            content_type: Annotated[str, Header(alias="content-type")] = "text/plain",
         ) -> Infos: ...
 
     api = HttpBinApi(base_url=BASE_URL)
 
-    infos = await api.test("foo")  # pyright: ignore[reportCallIssue]
+    infos = await api.test("foo")
     assert infos.data == "foo"
 
 
@@ -44,14 +42,14 @@ async def test_body_json():
             self,
             body: Annotated[Dict, JsonBody()],
             content_type: Annotated[
-                str, Header(alias="content-type", default="application/json")
-            ],
+                str, Header(alias="content-type")
+            ] = "application/json",
         ) -> Infos: ...
 
     api = HttpBinApi(base_url=BASE_URL)
 
     user = {"name": "John Doe", "age": 42}
-    infos = await api.test(user)  # pyright: ignore[reportCallIssue]
+    infos = await api.test(user)
     assert infos.json_data is not None
     assert infos.json_data == user
 
@@ -96,7 +94,7 @@ async def test_body_pydantic():
     api = HttpBinApi(base_url=BASE_URL)
 
     user = User(firstname="John", lastname="Doe", age=42)
-    infos = await api.test(user)  # pyright: ignore[reportCallIssue]
+    infos = await api.test(user)
     user2 = User.model_validate_json(infos.data)
     assert user == user2
 

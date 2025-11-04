@@ -151,12 +151,17 @@ from httpx import Client
 api = MyApi(base_url="https://httpbin.org")
 resp = api.get()
 resp.raise_for_status()
+
+# Or you can instanciate and manage your client
+with Client(base_url="https://httpbin.org") as client:
+    api = MyApi(client=client)
+    resp = api.get()
+    resp.raise_for_status()
+
 ```
 
 
 ## `async` Support
-
-> ✨ Since version `0.7.0`, the same code works for synchronous and `async` methods.
 
 You can write:
 ```python
@@ -210,6 +215,8 @@ But you can also specify a class so that the response is parsed. You can use:
 > Note: When the returned object is not `httpx.Response`, the `raise_for_status()` is called to ensure the HTTP response is OK before parsing the content. You can disable this behavior by setting `raise_for_status=False` in the method decorator. For `httpx.Response` return types, `raise_for_status()` is only called if explicitly set to `raise_for_status=True`.
 
 ```python
+from httpx import Response
+
 class User(BaseModel):
     name: str
     email: str
@@ -260,6 +267,7 @@ Key benefits of `ResponseModel`:
 - **Error handling**: Check response status even when `raise_for_status=False`
 - **Debugging**: Inspect the raw response for troubleshooting
 - **Conditional logic**: Make decisions based on status codes or headers
+- **The http.Response** attribute won't be serialized using Pydantic dump methods
 
 > **Note**: Only classes that inherit from `ResponseModel` will have the `_response` attribute. Regular `BaseModel` classes do not get access to the HTTP response object.
 
@@ -322,6 +330,8 @@ Like `fastapi`, you can use your method arguments to build the API path to call:
 ```python
 from datetime import datetime
 from functools import partial
+from typing import Annotated, Literal
+from pydantic import Field, PositiveInt
 
 class MyApi(RapidApi):
 
@@ -329,17 +339,29 @@ class MyApi(RapidApi):
     @get("/user/{user_id}")
     def get_user(self, user_id: Annotated[int, Path()]): ...
 
-    # Path parameters with value validation
+    # Path parameters with value validation using type annotations
     @get("/user/{user_id}")
-    def get_user(self, user_id: Annotated[PositiveInt, Path()]): ...
+    def get_user_validated(self, user_id: Annotated[PositiveInt, Path()]): ...
 
-    # Path parameters with a default value
-    @get("/user/{user_id}")
-    def get_user(self, user_id: Annotated[int, Path(default=1)]): ...
+    # Path parameters with literal validation
+    @get("/user/{status}")
+    def get_by_status(self, status: Annotated[Literal["active", "inactive"], Path()]): ...
 
-    # Path parameters with a default value using a factory
+    # Path parameters with pattern validation using Field()
+    @get("/user/{username}")
+    def get_by_username(self, username: Annotated[str, Path(), Field(pattern="[a-z]+")]): ...
+
+    # Python default values (recommended for simple defaults)
     @get("/user/{user_id}")
-    def get_user(self, user_id: Annotated[int, Path(default_factory=lambda: 42)]): ...
+    def get_user_default(self, user_id: Annotated[int, Path()] = 1): ...
+
+    # Pydantic default values using Field()
+    @get("/user/{user_id}")
+    def get_user_field_default(self, user_id: Annotated[int, Path(), Field(default=1)]): ...
+
+    # Pydantic default factory using Field()
+    @get("/user/{user_id}")
+    def get_user_factory(self, user_id: Annotated[int, Path(), Field(default_factory=lambda: 42)]): ...
 
     # Custom transformation for datetime path parameters
     @get("/events/{event_date}")
@@ -350,6 +372,12 @@ class MyApi(RapidApi):
     def get_file(self, filename: Annotated[str, Path(transformer=partial(str.replace, old=" ", new="-"))]): ...
 ```
 
+**Key Points:**
+- Use `Path()` annotation to mark path parameters
+- For **validation**: Use type annotations (like `Literal`, `PositiveInt`) or `Field(pattern="regex")`
+- For **defaults**: Use Python defaults (`= value`) or `Field(default=value)`
+- For **transformations**: Use the `transformer` parameter in `Path()`
+
 ## Query Parameters
 
 You can add `query parameters` to your request using the `Query` annotation:
@@ -357,6 +385,8 @@ You can add `query parameters` to your request using the `Query` annotation:
 ```python
 from datetime import datetime
 from functools import partial
+from typing import Annotated, Literal
+from pydantic import Field
 
 class MyApi(RapidApi):
 
@@ -364,21 +394,35 @@ class MyApi(RapidApi):
     @get("/issues")
     def get_issues(self, sort: Annotated[str, Query()]): ...
 
-    # Query parameters with value validation
+    # Query parameters with literal validation
     @get("/issues")
-    def get_issues(self, sort: Annotated[Literal["updated", "id"], Query()]): ...
+    def get_issues_validated(self, sort: Annotated[Literal["updated", "id"], Query()]): ...
 
-    # Query parameter with a default value
-    @get("/issues")
-    def get_issues(self, sort: Annotated[str, Query(default="updated")]): ...
+    # Query parameters with Field() validation
+    @get("/search")
+    def search_validated(self, q: Annotated[str, Query(), Field(max_length=100)]): ...
 
-    # Query parameter with a default value using a factory
+    # Python default values (recommended for simple defaults)
     @get("/issues")
-    def get_issues(self, sort: Annotated[str, Query(default_factory=lambda: "updated")]): ...
+    def get_issues_default(self, sort: Annotated[str, Query()] = "updated"): ...
+
+    # Pydantic default values using Field()
+    @get("/items")
+    def get_items(self, limit: Annotated[int, Query(), Field(default=10)]): ...
+
+    # Pydantic default factory using Field()
+    @get("/issues")
+    def get_issues_factory(self, sort: Annotated[str, Query(), Field(default_factory=lambda: "updated")]): ...
 
     # Query parameter with an alias
     @get("/issues")
-    def get_issues(self, my_parameter: Annotated[str, Query(alias="sort")]): ...
+    def get_issues_alias(self, my_parameter: Annotated[str, Query(alias="sort")]): ...
+
+    # Optional parameters (use None as default or Field)
+    @get("/search")
+    def search_optional(self, 
+                       q: Annotated[str | None, Query()] = None,
+                       page: Annotated[int | None, Query(), Field(default=None)] = None): ...
 
     # Custom transformation for datetime query parameters
     @get("/events")
@@ -386,12 +430,20 @@ class MyApi(RapidApi):
 
     # Boolean parameter with custom formatting
     @get("/search")
-    def search(self, include_archived: Annotated[bool, Query(transformer=lambda x: "true" if x else "false")]): ...
+    def search_bool(self, include_archived: Annotated[bool, Query(transformer=lambda x: "true" if x else "false")]): ...
 
     # List parameter with custom joining
     @get("/filter")
     def filter_items(self, tags: Annotated[list[str], Query(transformer=lambda x: ",".join(x))]): ...
 ```
+
+**Key Points:**
+- Use `Query()` annotation to mark query parameters
+- For **validation**: Use type annotations (like `Literal`) or `Field(max_length=10)`
+- For **defaults**: Use Python defaults (`= value`) or `Field(default=value)`
+- For **optional parameters**: Use `| None` type union and `None` as default
+- For **aliases**: Use the `alias` parameter in `Query()`
+- For **transformations**: Use the `transformer` parameter in `Query()`
 
 
 ## Header Parameters
@@ -401,6 +453,8 @@ You can add `headers` to your request using the `Header` annotation:
 ```python
 from datetime import datetime
 from functools import partial
+from typing import Annotated, Literal
+from pydantic import Field
 
 class MyApi(RapidApi):
 
@@ -408,21 +462,29 @@ class MyApi(RapidApi):
     @get("/issues")
     def get_issues(self, x_version: Annotated[str, Header()]): ...
 
-    # Header parameters with value validation
+    # Header parameters with literal validation
     @get("/issues")
-    def get_issues(self, x_version: Annotated[Literal["2024.06", "2024.01"], Header()]): ...
+    def get_issues_validated(self, x_version: Annotated[Literal["2024.06", "2024.01"], Header()]): ...
 
-    # Header parameter with a default value
-    @get("/issues")
-    def get_issues(self, x_version: Annotated[str, Header(default="2024.06")]): ...
+    # Header parameters with Field() validation
+    @get("/protected")
+    def get_protected_validated(self, auth: Annotated[str, Header(), Field(pattern="Bearer .+")]): ...
 
-    # Header parameter with a default value using a factory
+    # Python default values (recommended for simple defaults)
     @get("/issues")
-    def get_issues(self, x_version: Annotated[str, Header(default_factory=lambda: "2024.06")]): ...
+    def get_issues_default(self, x_version: Annotated[str, Header()] = "2024.06"): ...
+
+    # Pydantic default values using Field()
+    @get("/issues")
+    def get_issues_field_default(self, x_version: Annotated[str, Header(), Field(default="2024.06")]): ...
+
+    # Pydantic default factory using Field()
+    @get("/issues")
+    def get_issues_factory(self, x_version: Annotated[str, Header(), Field(default_factory=lambda: "2024.06")]): ...
 
     # Header parameter with an alias
     @get("/issues")
-    def get_issues(self, my_parameter: Annotated[str, Header(alias="x-version")]): ...
+    def get_issues_alias(self, my_parameter: Annotated[str, Header(alias="x-version")]): ...
 
     # Custom transformation for datetime headers
     @get("/timestamp")
@@ -434,8 +496,16 @@ class MyApi(RapidApi):
 
     # You can also add constant headers
     @get("/issues", headers={"x-version": "2024.06", "accept": "application/json"})
-    def get_issues(self): ...
+    def get_issues_constant(self): ...
 ```
+
+**Key Points:**
+- Use `Header()` annotation to mark header parameters
+- For **validation**: Use type annotations (like `Literal`) or `Field(pattern="regex")`
+- For **defaults**: Use Python defaults (`= value`) or `Field(default=value)`
+- For **aliases**: Use the `alias` parameter in `Header()`
+- For **transformations**: Use the `transformer` parameter in `Header()`
+- **Constant headers** can be added directly in the decorator
 
 ## Body Parameters
 
@@ -486,7 +556,7 @@ class MyApi(RapidApi):
 
 ## XML Support
 
-XML is also supported if you use [Pydantic-Xml](https://pydantic-xml.readthedocs.io/), either for responses (if you type your function to return a `BaseXmlModel` subclass) or for POST/PUT content with `PydanticXmlBody`.
+XML is also supported if you use [Pydantic-xml](https://pydantic-xml.readthedocs.io/), either for responses (if you type your function to return a `BaseXmlModel` subclass) or for POST/PUT content with `PydanticXmlBody`.
 
 ```python
 from functools import partial
@@ -511,77 +581,6 @@ class MyApi(RapidApi):
     )]): ...
 ```
 
-## Parameter Transformers
-
-All parameter annotations (`Path`, `Query`, `Header`, `Body`, `PydanticBody`, `PydanticXmlBody`) support a `transformer` parameter that allows you to customize how parameter values are processed before being used in the HTTP request.
-
-### Default Transformers
-
-- **Path, Query, Header**: Default to `str()` for automatic string conversion
-- **PydanticBody**: Defaults to `partial(BaseModel.model_dump_json, by_alias=True, exclude_none=True)`
-- **PydanticXmlBody**: Defaults to `partial(BaseXmlModel.to_xml, exclude_none=True)`
-
-### Custom Transformers
-
-```python
-from datetime import datetime
-from functools import partial
-from pydantic import BaseModel
-from rapid_api_client import RapidApi, get, post, Path, Query, Header, PydanticBody
-
-class UserModel(BaseModel):
-    name: str
-    email: str
-    created_at: datetime
-
-class MyApi(RapidApi):
-    
-    # DateTime formatting for path parameters
-    @get("/events/{date}")
-    def get_events(self, date: Annotated[datetime, Path(transformer=lambda x: x.strftime("%Y-%m-%d"))]): ...
-    
-    # Custom boolean formatting for query parameters
-    @get("/search")
-    def search(self, 
-              active_only: Annotated[bool, Query(transformer=lambda x: "yes" if x else "no")],
-              tags: Annotated[list[str], Query(transformer=lambda x: ",".join(x))]): ...
-    
-    # Authorization header formatting
-    @get("/protected")
-    def get_protected(self, token: Annotated[str, Header(
-        alias="authorization", 
-        transformer=lambda x: f"Bearer {x}"
-    )]): ...
-    
-    # Custom JSON serialization with different options
-    @post("/users")
-    def create_user(self, user: Annotated[UserModel, PydanticBody(
-        transformer=partial(BaseModel.model_dump_json, exclude_none=False, by_alias=False)
-    )]): ...
-    
-    # Complex transformations using external functions
-    @get("/files/{path}")
-    def get_file(self, file_path: Annotated[str, Path(transformer=url_encode_path)]): ...
-
-def url_encode_path(path: str) -> str:
-    """Custom transformer function"""
-    return path.replace(" ", "%20").replace("/", "%2F")
-```
-
-### Transformer Function Signature
-
-Transformer functions must accept any value and return any value:
-
-```python
-from typing import Any, Callable
-
-TransformerFunc = Callable[[Any], Any]
-
-# Example transformer signatures:
-def string_transformer(value: Any) -> str: ...
-def datetime_transformer(value: datetime) -> str: ...
-def list_transformer(value: list) -> str: ...
-```
 
 # Examples
 
