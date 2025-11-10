@@ -37,7 +37,7 @@ from .annotations import (
     Query,
     RapidAnnotation,
 )
-from .errors import InvalidBodyError
+from .errors import AnnotationError, FieldError, InvalidBodyError
 from .utils import RA, filter_none_values, find_annotation
 
 
@@ -108,7 +108,7 @@ class RapidParameter(Generic[RA]):
             # Use pydantic default value if available
             out = self.fieldinfo_annotation.get_default(call_default_factory=True)
             if out is PydanticUndefined:
-                raise ValueError(f"Missing value for parameter {self.name}")
+                raise FieldError(f"Missing value for parameter {self.name}")
 
         # Use pydantic to validate the value
         out = TypeAdapter(self.parameter.annotation).validate_python(out)
@@ -196,7 +196,7 @@ class ParameterManager:
                         )
                     )
                 else:
-                    raise ValueError(
+                    raise AnnotationError(
                         f"Invalid parameter annotation: {rapid_annotation}"
                     )
 

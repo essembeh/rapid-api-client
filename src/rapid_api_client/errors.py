@@ -36,3 +36,37 @@ class InvalidBodyError(RapidError):
     """
 
     ...
+
+
+class FieldError(RapidError):
+    """Exception raised when a required field value is missing.
+
+    This exception is raised when a parameter that is required for an API
+    call does not have a value provided. This typically occurs when:
+
+    - A required parameter is not provided in the method call
+    - A parameter value evaluates to PydanticUndefined
+    - Missing values for required fields during parameter processing
+
+    The error message will specify which parameter is missing to help
+    with debugging.
+    """
+
+    ...
+
+
+class AnnotationError(RapidError):
+    """Exception raised when an invalid parameter annotation is encountered.
+
+    This exception is raised during parameter processing when an annotation
+    cannot be properly handled or processed. This occurs when:
+
+    - An annotation type is not supported by the library
+    - Invalid annotation configuration is detected
+    - Malformed or incompatible annotation structure
+
+    The error message will contain details about the invalid annotation
+    to help identify the issue.
+    """
+
+    ...
