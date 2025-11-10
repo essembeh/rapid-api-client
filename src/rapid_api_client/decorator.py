@@ -15,14 +15,17 @@ sending the requests, and processing the responses.
 """
 
 import inspect
-from functools import partial, wraps
+from functools import wraps
 from inspect import signature
-from typing import Any, Dict, Optional, Type, Union
+from typing import Any, Callable, Dict, Optional, Type, TypeVar, Union
 
 from httpx import AsyncClient, Client, Response
 
 from .client import RapidApi
 from .parameters import ParameterManager
+
+T = TypeVar("T")
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 def http(
@@ -31,7 +34,7 @@ def http(
     timeout: float | None = None,
     headers: Dict[str, str] | None = None,
     raise_for_status: Optional[bool] = None,
-) -> Any:
+) -> Callable[[F], F]:
     """
     Main decorator used to generate an HTTP request and return its result.
 
@@ -62,7 +65,7 @@ def http(
         ...     def get_user(self, user_id: Annotated[int, Path()]): ...
     """
 
-    def decorator(func):
+    def decorator(func: F) -> F:
         sig = signature(func)
         parameter_manager = ParameterManager.from_sig(sig)
         response_class = (
@@ -119,7 +122,7 @@ def http(
                     response, response_class, raise_for_status=raise_for_status
                 )
 
-        return async_wrapper if is_async else wrapper
+        return async_wrapper if is_async else wrapper  # type: ignore
 
     return decorator
 
@@ -175,9 +178,42 @@ def rapid(**default_kwargs: Any) -> Any:
     return decorator
 
 
-# Convenience decorators for common HTTP methods
-get = partial(http, "GET")
-post = partial(http, "POST")
-delete = partial(http, "DELETE")
-put = partial(http, "PUT")
-patch = partial(http, "PATCH")
+def _make_method_decorator(method: str) -> Callable[..., Callable[[F], F]]:
+    """
+    Create an HTTP method decorator that inherits the signature from http().
+
+    This function dynamically creates decorators (get, post, etc.) that have the exact
+    same signature as the http() function, minus the 'method' parameter. This ensures
+    perfect auto-completion and type checking while avoiding code duplication.
+
+    Args:
+        method: The HTTP method name (GET, POST, PUT, PATCH, DELETE)
+
+    Returns:
+        A decorator function with the same signature as http() minus the method parameter
+    """
+    # Get the signature of the http function
+    http_sig = inspect.signature(http)
+
+    # Create a new signature without the 'method' parameter
+    new_sig = http_sig.replace(parameters=list(http_sig.parameters.values())[1:])
+
+    # Create the actual decorator function
+    def decorator(*args, **kwargs) -> Callable[[F], F]:
+        """Dynamically generated HTTP method decorator."""
+        return http(method, *args, **kwargs)
+
+    # Apply the new signature to preserve auto-completion and type hints
+    decorator.__signature__ = new_sig  # type: ignore
+    decorator.__name__ = method.lower()
+    decorator.__doc__ = f"{method} request decorator."
+
+    return decorator
+
+
+# Create convenience decorators for common HTTP methods
+get = _make_method_decorator("GET")
+post = _make_method_decorator("POST")
+put = _make_method_decorator("PUT")
+patch = _make_method_decorator("PATCH")
+delete = _make_method_decorator("DELETE")
