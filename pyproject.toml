@@ -1,6 +1,6 @@
 [project]
 name = "rapid-api-client"
-version = "0.8.5"
+version = "0.9.0"
 description = "Rapidly develop your API clients using decorators and annotations"
 readme = "README.md"
 authors = [

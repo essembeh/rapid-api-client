@@ -576,7 +576,7 @@ wheels = [
 
 [[package]]
 name = "rapid-api-client"
-version = "0.8.5"
+version = "0.9.0"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
