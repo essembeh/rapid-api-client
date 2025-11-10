@@ -216,7 +216,7 @@ class RapidApi:
         if response_class is bytes:
             return cast(T, response.content)
 
-        out = None
+        out: T
         if (
             pydantic_xml is not None
             and isclass(response_class)
