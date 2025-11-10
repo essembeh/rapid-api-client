@@ -14,6 +14,7 @@ from rapid_api_client import (
     RapidApi,
     post,
 )
+from rapid_api_client.errors import InvalidBodyError
 
 from .conftest import BASE_URL, Infos
 
@@ -119,7 +120,7 @@ async def test_body_files():
 
 @mark.asyncio(loop_scope="module")
 async def test_body_mixed():
-    with raises(AssertionError):
+    with raises(InvalidBodyError):
 
         class HttpBinApi1(RapidApi):
             @post("/anything")
@@ -129,7 +130,7 @@ async def test_body_mixed():
                 param2: Annotated[str, FormBody()],
             ) -> Infos: ...
 
-    with raises(AssertionError):
+    with raises(InvalidBodyError):
 
         class HttpBinApi2(RapidApi):
             @post("/anything")

@@ -27,7 +27,7 @@ compatibility with Pydantic v2's validation system.
 
 from dataclasses import dataclass, field
 from functools import partial
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Literal, Optional
 
 from pydantic import BaseModel
 
@@ -235,6 +235,8 @@ class Body(RapidAnnotation):
         >>> response = api.send_data("raw content")  # Sends "raw content" as the request body
     """
 
+    keyword: Literal["content", "data", "json", "files"] = "content"
+
 
 @dataclass(slots=True)
 class JsonBody(Body):
@@ -256,6 +258,9 @@ class JsonBody(Body):
         >>> response = api.create_user({"name": "John", "email": "john@example.com"})
         >>> # Sends {"name": "John", "email": "john@example.com"} as JSON
     """
+
+    def __post_init__(self):
+        self.keyword = "json"
 
 
 @dataclass(slots=True)
@@ -292,6 +297,9 @@ class FormBody(Body):
         >>> api.update({"field1": "value1", "field2": "value2"})  # Sends field1=value1&field2=value2
     """
 
+    def __post_init__(self):
+        self.keyword = "data"
+
 
 @dataclass(slots=True)
 class FileBody(Body):
@@ -313,6 +321,9 @@ class FileBody(Body):
         >>> with open("document.pdf", "rb") as f:
         ...     response = api.upload_file(f)  # Uploads document.pdf as multipart/form-data
     """
+
+    def __post_init__(self):
+        self.keyword = "files"
 
 
 @dataclass(slots=True)

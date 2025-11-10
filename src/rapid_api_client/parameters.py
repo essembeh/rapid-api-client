@@ -33,13 +33,11 @@ from .annotations import (
     FileBody,
     FormBody,
     Header,
-    JsonBody,
     Path,
-    PydanticBody,
-    PydanticXmlBody,
     Query,
     RapidAnnotation,
 )
+from .errors import InvalidBodyError
 from .utils import RA, filter_none_values, find_annotation
 
 
@@ -205,28 +203,22 @@ class ParameterManager:
         # consistency check for body parameters
         if len(out.body_parameters) > 0:
             first_body_param = out.body_parameters[0]
-            if isinstance(first_body_param.rapid_annotation, FileBody):
-                # FileBody: check 1+ parameters of type FileBody
-                assert all(
-                    map(
-                        lambda p: isinstance(p.rapid_annotation, FileBody),
-                        out.body_parameters,
-                    )
-                ), "All body parameters must be of type FileBody"
-            elif isinstance(first_body_param.rapid_annotation, FormBody):
-                # FormBody: check 1+ parameters of type FormBody
-                assert all(
-                    map(
-                        lambda p: isinstance(p.rapid_annotation, FormBody),
-                        out.body_parameters,
-                    )
-                ), "All body parameters must be of type FormBody"
-            elif isinstance(first_body_param.rapid_annotation, JsonBody):
-                # JsonBody: check 1 parameter of type JsonBody
-                assert len(out.body_parameters) == 1, "Only one JsonBody allowed"
+            if isinstance(first_body_param.rapid_annotation, (FileBody, FormBody)):
+                # FileBody/FormBody: check 1+ parameters of type FileBody
+                for other_param in out.body_parameters:
+                    if not isinstance(
+                        other_param.rapid_annotation,
+                        type(first_body_param.rapid_annotation),
+                    ):
+                        raise InvalidBodyError(
+                            f"All body parameters must be of type {first_body_param.rapid_annotation.__class__.__name__}"
+                        )
             elif isinstance(first_body_param.rapid_annotation, Body):
                 # Body: check 1 parameter of type Body
-                assert len(out.body_parameters) == 1, "Only one Body allowed"
+                if len(out.body_parameters) > 1:
+                    raise InvalidBodyError(
+                        f"Only one Body allowed for type {first_body_param.rapid_annotation.__class__.__name__}"
+                    )
 
         return out
 
@@ -298,14 +290,14 @@ class ParameterManager:
             first_body_param = self.body_parameters[0]
 
             if isinstance(first_body_param.rapid_annotation, FileBody):
-                # there are one or more files
+                # Case "files", one or more files can be provided
                 values = filter_none_values(
                     {p.get_name(): p.get_value(ba) for p in self.body_parameters}
                 )
                 if len(values) > 0:
-                    return "files", values
+                    return first_body_param.rapid_annotation.keyword, values
             elif isinstance(first_body_param.rapid_annotation, FormBody):
-                # there are one or more form parameters
+                # Case "data", one or more fields can be provided
                 values = {}
 
                 def update_values(p: RapidParameter[Body]) -> None:
@@ -322,21 +314,10 @@ class ParameterManager:
                     update_values(param)
 
                 if len(values) > 0:
-                    return "data", values
-            elif isinstance(
-                first_body_param.rapid_annotation, (PydanticXmlBody, PydanticBody)
-            ):
-                # there is one PydanticXmlBody or PydanticBody parameter
-                if (value := first_body_param.get_value(ba)) is not None:
-                    return "content", value
-            elif isinstance(first_body_param.rapid_annotation, JsonBody):
-                # there is one JsonBody parameter
-                if (value := first_body_param.get_value(ba)) is not None:
-                    assert isinstance(value, dict)
-                    return "json", value
+                    return first_body_param.rapid_annotation.keyword, values
             else:
-                # there is one content parameter
+                # Other cases, only one parameter allowed
                 if (value := first_body_param.get_value(ba)) is not None:
-                    return "content", value
+                    return first_body_param.rapid_annotation.keyword, value
 
         return (None, None)
