@@ -12,7 +12,7 @@ from rapid_api_client import (
     RapidApi,
     get,
     post,
-    rapid,
+    rapid_default,
 )
 
 
@@ -32,7 +32,7 @@ class User(BaseModel):
     age: int
 
 
-@rapid(base_url="https://httpbin.org")
+@rapid_default(base_url="https://httpbin.org")
 class HttpBinApi(RapidApi):
     @get("/anything/{path1}/{path2}")
     async def get(

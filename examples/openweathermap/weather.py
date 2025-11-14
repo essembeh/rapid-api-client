@@ -3,7 +3,7 @@ from typing import Annotated, Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
-from rapid_api_client import Query, RapidApi, get, rapid
+from rapid_api_client import Query, RapidApi, get, rapid_default
 
 
 class WeatherCondition(BaseModel):
@@ -79,7 +79,7 @@ class ForecastResponse(BaseModel):
     city: Dict[str, Any]
 
 
-@rapid(base_url="https://api.openweathermap.org/data/2.5")
+@rapid_default(base_url="https://api.openweathermap.org/data/2.5")
 class OpenWeatherMapApi(RapidApi):
     @get("/weather")
     def get_current_weather(

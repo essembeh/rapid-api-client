@@ -127,7 +127,7 @@ def http(
     return decorator
 
 
-def rapid(**default_kwargs: Any) -> Any:
+def rapid_default(**default_kwargs: Any) -> Any:
     """
     Class decorator to configure RapidApi subclasses with default parameters.
 
@@ -141,10 +141,10 @@ def rapid(**default_kwargs: Any) -> Any:
         A decorator function that wraps the RapidApi subclass
 
     Example:
-        >>> from rapid_api_client import RapidApi, rapid, get
+        >>> from rapid_api_client import RapidApi, rapid_default, get
         >>> from typing import Annotated
         >>>
-        >>> @rapid(base_url="https://api.example.com", headers={"X-API-Key": "default-key"})
+        >>> @rapid_default(base_url="https://api.example.com", headers={"X-API-Key": "default-key"})
         >>> class MyApi(RapidApi):
         ...     @get("/users/{user_id}")
         ...     def get_user(self, user_id: Annotated[int, Path()]): ...
@@ -176,6 +176,22 @@ def rapid(**default_kwargs: Any) -> Any:
         return cls
 
     return decorator
+
+
+def rapid(**default_kwargs: Any) -> Any:
+    """
+    Legacy decorator, now deprecated. Use `@rapid_default` instead.
+    """
+    import warnings
+
+    warnings.warn(
+        "The 'rapid' decorator is deprecated and will be removed in a future version. "
+        "Please use 'rapid_default' instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
+    return rapid_default(**default_kwargs)
 
 
 def _make_method_decorator(method: str) -> Callable[..., Callable[[F], F]]:

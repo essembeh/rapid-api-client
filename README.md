@@ -42,7 +42,7 @@ Then, declare your API client using *decorators* and *annotations*:
 ```python
 from typing import Annotated, List
 from pydantic import BaseModel
-from rapid_api_client import RapidApi, get, post, Path, Query, JsonBody, rapid
+from rapid_api_client import RapidApi, get, post, Path, Query, JsonBody, rapid_default
 
 # Define your data models
 class User(BaseModel):
@@ -55,8 +55,8 @@ class CreateUserRequest(BaseModel):
     email: str
 
 # Define your API client
-# Note: the @rapid decorator is optional, but it allows you to set default values for your constructor
-@rapid(base_url="https://api.example.com")
+# Note: the @rapid_default decorator is optional, but it allows you to set default values for your constructor
+@rapid_default(base_url="https://api.example.com")
 class UserApi(RapidApi):
     # GET request with path parameter and query parameter
     @get("/users/{user_id}")
@@ -85,7 +85,7 @@ Finally, use your API client to interact with the API:
 # Use the API client
 if __name__ == "__main__":
     # Initialize the API client
-    # Note: you don't need to pass the base URL here if you used the @rapid decorator
+    # Note: you don't need to pass the base URL here if you used the @rapid_default decorator
     api = UserApi()
     
     # Get a user by ID

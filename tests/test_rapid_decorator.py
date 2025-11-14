@@ -1,16 +1,18 @@
 """
-Tests for the @rapid decorator.
+Tests for the @rapid and @rapid_default decorators.
 """
+
+import warnings
 
 from httpx import Client
 
-from rapid_api_client import RapidApi, get, rapid
+from rapid_api_client import RapidApi, get, rapid, rapid_default
 
 
-def test_rapid_decorator_base_url():
-    """Test that the @rapid decorator sets the base_url correctly."""
+def test_rapid_default_decorator_base_url():
+    """Test that the @rapid_default decorator sets the base_url correctly."""
 
-    @rapid(base_url="https://example.com")
+    @rapid_default(base_url="https://example.com")
     class TestApi(RapidApi):
         @get("/test")
         def test_method(self): ...
@@ -22,10 +24,10 @@ def test_rapid_decorator_base_url():
     assert api.client_factory_args["base_url"] == "https://example.com"
 
 
-def test_rapid_decorator_headers():
-    """Test that the @rapid decorator sets the headers correctly."""
+def test_rapid_default_decorator_headers():
+    """Test that the @rapid_default decorator sets the headers correctly."""
 
-    @rapid(headers={"X-Test": "test-value"})
+    @rapid_default(headers={"X-Test": "test-value"})
     class TestApi(RapidApi):
         @get("/test")
         def test_method(self): ...
@@ -37,10 +39,10 @@ def test_rapid_decorator_headers():
     assert api.client_factory_args["headers"]["X-Test"] == "test-value"
 
 
-def test_rapid_decorator_override():
+def test_rapid_default_decorator_override():
     """Test that instance parameters override decorator parameters."""
 
-    @rapid(
+    @rapid_default(
         base_url="https://example.com",
         headers={"X-Test": "test-value", "X-Common": "decorator-value"},
     )
@@ -63,10 +65,10 @@ def test_rapid_decorator_override():
     assert api.client_factory_args["headers"]["X-Common"] == "instance-value"
 
 
-def test_rapid_decorator_with_client():
-    """Test that the @rapid decorator works with a provided client."""
+def test_rapid_default_decorator_with_client():
+    """Test that the @rapid_default decorator works with a provided client."""
 
-    @rapid(base_url="https://example.com")
+    @rapid_default(base_url="https://example.com")
     class TestApi(RapidApi):
         @get("/test")
         def test_method(self): ...
@@ -79,3 +81,72 @@ def test_rapid_decorator_with_client():
 
     # Check that the client was set correctly
     assert api._client is client
+
+
+def test_rapid_decorator_deprecation_warning():
+    """Test that the @rapid decorator raises a deprecation warning."""
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+
+        @rapid(base_url="https://example.com")
+        class TestApi(RapidApi):
+            @get("/test")
+            def test_method(self): ...
+
+        # Check that a deprecation warning was raised
+        assert len(w) == 1
+        assert issubclass(w[0].category, DeprecationWarning)
+        assert "rapid" in str(w[0].message)
+        assert "rapid_default" in str(w[0].message)
+
+
+def test_rapid_decorator_still_works():
+    """Test that the deprecated @rapid decorator still works functionally."""
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+
+        @rapid(base_url="https://example.com")
+        class TestApi(RapidApi):
+            @get("/test")
+            def test_method(self): ...
+
+        # Create an instance without specifying base_url
+        api = TestApi()
+
+        # Check that the base_url was set correctly
+        assert api.client_factory_args["base_url"] == "https://example.com"
+
+
+def test_rapid_and_rapid_default_equivalence():
+    """Test that @rapid and @rapid_default produce the same results."""
+
+    # Test with rapid_default
+    @rapid_default(base_url="https://example.com", headers={"X-Test": "test"})
+    class TestApiDefault(RapidApi):
+        @get("/test")
+        def test_method(self): ...
+
+    # Test with deprecated rapid (suppress warnings)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", DeprecationWarning)
+
+        @rapid(base_url="https://example.com", headers={"X-Test": "test"})
+        class TestApiRapid(RapidApi):
+            @get("/test")
+            def test_method(self): ...
+
+    # Create instances
+    api_default = TestApiDefault()
+    api_rapid = TestApiRapid()
+
+    # Check that both behave identically
+    assert (
+        api_default.client_factory_args["base_url"]
+        == api_rapid.client_factory_args["base_url"]
+    )
+    assert (
+        api_default.client_factory_args["headers"]["X-Test"]
+        == api_rapid.client_factory_args["headers"]["X-Test"]
+    )

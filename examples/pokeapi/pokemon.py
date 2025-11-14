@@ -2,7 +2,7 @@ from typing import Annotated, Dict, List, Optional
 
 from pydantic import BaseModel, HttpUrl
 
-from rapid_api_client import Path, Query, RapidApi, get, rapid
+from rapid_api_client import Path, Query, RapidApi, get, rapid_default
 
 
 class PokemonSprites(BaseModel):
@@ -45,7 +45,7 @@ class PokemonList(BaseModel):
     results: List[PokemonListItem]
 
 
-@rapid(base_url="https://pokeapi.co/api/v2")
+@rapid_default(base_url="https://pokeapi.co/api/v2")
 class PokeApi(RapidApi):
     @get("/pokemon/{pokemon_id}")
     def get_pokemon(

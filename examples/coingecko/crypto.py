@@ -3,7 +3,7 @@ from typing import Annotated, Dict, List, Optional
 
 from pydantic import BaseModel
 
-from rapid_api_client import Path, Query, RapidApi, get, rapid
+from rapid_api_client import Path, Query, RapidApi, get, rapid_default
 
 
 class CoinMarketData(BaseModel):
@@ -56,7 +56,7 @@ class GlobalResponse(BaseModel):
     data: GlobalData
 
 
-@rapid(base_url="https://api.coingecko.com/api/v3")
+@rapid_default(base_url="https://api.coingecko.com/api/v3")
 class CoinGeckoApi(RapidApi):
     @get("/coins/markets")
     def get_coin_markets(

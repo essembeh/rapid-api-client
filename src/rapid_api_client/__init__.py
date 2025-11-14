@@ -42,7 +42,7 @@ from .annotations import (
     Query,
 )
 from .client import RapidApi
-from .decorator import delete, get, http, patch, post, put, rapid
+from .decorator import delete, get, http, patch, post, put, rapid, rapid_default
 from .response import ResponseModel
 
 __version__ = version(__name__)
@@ -63,6 +63,7 @@ __all__ = [
     "PydanticXmlBody",
     "Query",
     "rapid",
+    "rapid_default",
     "RapidApi",
     "ResponseModel",
 ]

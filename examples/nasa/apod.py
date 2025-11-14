@@ -3,7 +3,7 @@ from typing import Annotated, List, Optional
 
 from pydantic import BaseModel, HttpUrl
 
-from rapid_api_client import Query, RapidApi, get, rapid
+from rapid_api_client import Query, RapidApi, get, rapid_default
 
 
 class AstronomyPicture(BaseModel):
@@ -46,7 +46,7 @@ class MarsRoverPhotosResponse(BaseModel):
     photos: List[MarsRoverPhoto]
 
 
-@rapid(base_url="https://api.nasa.gov")
+@rapid_default(base_url="https://api.nasa.gov")
 class NasaApi(RapidApi):
     @get("/planetary/apod")
     def get_astronomy_picture(
