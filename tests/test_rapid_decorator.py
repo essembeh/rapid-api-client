@@ -21,7 +21,7 @@ def test_rapid_default_decorator_base_url():
     api = TestApi()
 
     # Check that the base_url was set correctly
-    assert api.client_factory_args["base_url"] == "https://example.com"
+    assert api._factory_args["base_url"] == "https://example.com"
 
 
 def test_rapid_default_decorator_headers():
@@ -36,7 +36,7 @@ def test_rapid_default_decorator_headers():
     api = TestApi()
 
     # Check that the headers were set correctly
-    assert api.client_factory_args["headers"]["X-Test"] == "test-value"
+    assert api._factory_args["headers"]["X-Test"] == "test-value"
 
 
 def test_rapid_default_decorator_override():
@@ -57,12 +57,12 @@ def test_rapid_default_decorator_override():
     )
 
     # Check that the base_url was overridden
-    assert api.client_factory_args["base_url"] == "https://override.com"
+    assert api._factory_args["base_url"] == "https://override.com"
 
     # Check that the headers were the user values instead of the decorator values
-    assert "X-Test" not in api.client_factory_args["headers"]
-    assert api.client_factory_args["headers"]["X-Override"] == "override-value"
-    assert api.client_factory_args["headers"]["X-Common"] == "instance-value"
+    assert "X-Test" not in api._factory_args["headers"]
+    assert api._factory_args["headers"]["X-Override"] == "override-value"
+    assert api._factory_args["headers"]["X-Common"] == "instance-value"
 
 
 def test_rapid_default_decorator_with_client():
@@ -116,7 +116,7 @@ def test_rapid_decorator_still_works():
         api = TestApi()
 
         # Check that the base_url was set correctly
-        assert api.client_factory_args["base_url"] == "https://example.com"
+        assert api._factory_args["base_url"] == "https://example.com"
 
 
 def test_rapid_and_rapid_default_equivalence():
@@ -142,11 +142,8 @@ def test_rapid_and_rapid_default_equivalence():
     api_rapid = TestApiRapid()
 
     # Check that both behave identically
+    assert api_default._factory_args["base_url"] == api_rapid._factory_args["base_url"]
     assert (
-        api_default.client_factory_args["base_url"]
-        == api_rapid.client_factory_args["base_url"]
-    )
-    assert (
-        api_default.client_factory_args["headers"]["X-Test"]
-        == api_rapid.client_factory_args["headers"]["X-Test"]
+        api_default._factory_args["headers"]["X-Test"]
+        == api_rapid._factory_args["headers"]["X-Test"]
     )

@@ -1,5 +1,5 @@
 test pytest_args="":
-    uv run -- pytest --cov=rapid_api_client {{pytest_args}} tests/
+    uv run -- pytest -v --cov=rapid_api_client {{pytest_args}} tests/
     uv run -- coverage html
     xdg-open htmlcov/index.html
 

@@ -17,6 +17,7 @@ from inspect import isclass
 from typing import (
     Any,
     AsyncGenerator,
+    Callable,
     Dict,
     Generator,
     Optional,
@@ -55,11 +56,21 @@ class RapidApi:
         >>> user = api.get_user(123)
     """
 
+    __slots__ = (
+        "_client",
+        "_client_factory",
+        "_async_client",
+        "_async_client_factory",
+        "_factory_args",
+    )
+
     def __init__(
         self,
         *,
-        client: Client | None = None,
-        async_client: AsyncClient | None = None,
+        client: Optional[Client] = None,
+        client_factory: Optional[Callable[..., Client]] | None = None,
+        async_client: Optional[AsyncClient] = None,
+        async_client_factory: Optional[Callable[..., AsyncClient]] = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -68,15 +79,21 @@ class RapidApi:
         Args:
             client: An existing httpx.Client instance to use for synchronous requests
             async_client: An existing httpx.AsyncClient instance to use for asynchronous requests
+            client_factory: A callable that creates httpx.Client instances. If provided, will be used
+                           instead of the default Client constructor for synchronous requests
+            async_client_factory: A callable that creates httpx.AsyncClient instances. If provided,
+                                 will be used instead of the default AsyncClient constructor for async requests
             **kwargs: Additional arguments to pass to the httpx.Client and httpx.AsyncClient
                      constructors when creating new clients. Common arguments include:
                      - base_url: The base URL for the API
                      - headers: Default headers to include in all requests
                      - timeout: Default timeout for requests
         """
-        self._client: Client | None = client
-        self._async_client: AsyncClient | None = async_client
-        self.client_factory_args: Dict[str, Any] = kwargs
+        self._client = client
+        self._client_factory = client_factory
+        self._async_client = async_client
+        self._async_client_factory = async_client_factory
+        self._factory_args: Dict[str, Any] = kwargs
 
     @contextmanager
     def sync_client(self) -> Generator[Client, None, None]:
@@ -84,20 +101,18 @@ class RapidApi:
         Context manager that provides access to an httpx.Client instance.
 
         If a client was provided during initialization, yields that existing client.
-        Otherwise, creates a new client using the factory arguments and ensures
+        Otherwise, creates a new client using the factory function (if provided) or
+        the default Client constructor with the factory arguments, and ensures
         proper cleanup when the context exits.
 
         Yields:
             Client: An httpx.Client instance for making synchronous HTTP requests
-
-        Example:
-            with api.sync_client() as client:
-                response = client.get("/endpoint")
         """
         if self._client:
             yield self._client
         else:
-            with Client(**self.client_factory_args) as client:
+            factory = self._client_factory or Client
+            with factory(**self._factory_args) as client:
                 yield client
 
     @asynccontextmanager
@@ -106,21 +121,19 @@ class RapidApi:
         Async context manager that provides access to an httpx.AsyncClient instance.
 
         If an async client was provided during initialization, yields that existing client.
-        Otherwise, creates a new async client using the factory arguments and ensures
+        Otherwise, creates a new async client using the factory function (if provided) or
+        the default AsyncClient constructor with the factory arguments, and ensures
         proper cleanup when the context exits.
 
         Yields:
             AsyncClient: An httpx.AsyncClient instance for making asynchronous HTTP requests
-
-        Example:
-            async with api.async_client() as client:
-                response = await client.get("/endpoint")
         """
         if self._async_client:
             yield self._async_client
         else:
-            async with AsyncClient(**self.client_factory_args) as async_client:
-                yield async_client
+            factory = self._async_client_factory or AsyncClient
+            async with factory(**self._factory_args) as client:
+                yield client
 
     def build_request(
         self, client: Union[Client, AsyncClient], *, method: str, url: str, **kwargs
@@ -146,15 +159,6 @@ class RapidApi:
 
         Returns:
             Request: An httpx.Request object ready to be sent
-
-        Example:
-            with api.sync_client() as client:
-                request = api.build_request(
-                    client,
-                    method="GET",
-                    url="/users/123",
-                    params={"include": "profile"}
-                )
         """
         return client.build_request(method=method, url=url, **kwargs)
 
@@ -192,13 +196,6 @@ class RapidApi:
             HTTPStatusError: When raise_for_status is True and the response has an error status code
             ValidationError: When the response content cannot be parsed into the specified type
             ValueError: When the response format doesn't match the expected type
-
-        Example:
-            response = client.get("/users/123")
-            user = api.process_response(response, UserModel)
-
-            # For raw response handling
-            raw_response = api.process_response(response, Response, raise_for_status=False)
         """
         if response_class is Response:
             # In case of Response, only check status if explicitly asked
