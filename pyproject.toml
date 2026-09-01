@@ -81,6 +81,7 @@ testpaths = ["tests"]
 [dependency-groups]
 dev = [
     "mypy>=2.3",
+    "pip-audit>=2.10.1",
     "pydantic-xml>=2.18.0",
     "pytest>=8.4.2",
     "pytest-asyncio>=1.2.0",

@@ -18,6 +18,15 @@ format:
 test pytest_args="":
     uv run -- pytest --cov=rapid_api_client --cov-report=term-missing {{pytest_args}} tests/
 
+# Known vulnerabilities in the dependencies resolved from uv.lock
+audit:
+    uv run --no-sync -- pip-audit
+
+# Report outdated direct dependencies, and update GitHub Actions pins (rewrites .github/workflows/)
+outdated:
+    uv tree --outdated --depth 1
+    GITHUB_TOKEN=$(gh auth token) uvx gha-update
+
 # Same, with a browsable HTML coverage report
 test-html pytest_args="":
     uv run -- pytest --cov=rapid_api_client --cov-report=html {{pytest_args}} tests/
