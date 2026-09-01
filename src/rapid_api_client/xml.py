@@ -17,7 +17,7 @@ except ImportError:  # pragma: nocover
 
 # `pydantic_xml` is re-exported: client.py imports the guarded symbol from here
 # so the optional-dependency handling stays in a single place.
-__all__ = ["pydantic_xml", "pydantic_xml_transformer"]
+__all__ = ["check_pydantic_xml_installed", "pydantic_xml", "pydantic_xml_transformer"]
 
 
 def check_pydantic_xml_installed() -> None:

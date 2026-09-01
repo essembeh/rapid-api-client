@@ -32,7 +32,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel
 
-from .xml import pydantic_xml_transformer
+from .xml import check_pydantic_xml_installed, pydantic_xml_transformer
 
 
 @dataclass(slots=True)
@@ -415,5 +415,7 @@ class PydanticXmlBody(Body):
     """
 
     def __post_init__(self) -> None:
+        # fail early with a clear error if the optional dependency is missing
+        check_pydantic_xml_installed()
         if self.transformer is None:
             self.transformer = pydantic_xml_transformer

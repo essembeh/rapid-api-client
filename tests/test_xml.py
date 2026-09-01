@@ -2,7 +2,7 @@ from functools import partial
 from typing import Annotated
 
 from pydantic_xml import BaseXmlModel, attr, element
-from pytest import mark
+from pytest import MonkeyPatch, mark, raises
 
 from rapid_api_client import PydanticXmlBody, RapidApi, ResponseModel, get, post
 
@@ -150,3 +150,10 @@ async def test_body_pydanticxml_serializer() -> None:
     assert (
         await api.default_config(Data())
     ).data == '<data text_empty="" text_default="42"><sub_empty /><sub_default>42</sub_default></data>'
+
+
+def test_pydanticxml_body_requires_pydantic_xml(monkeypatch: MonkeyPatch) -> None:
+    """PydanticXmlBody must fail early with a clear error when pydantic-xml is not installed."""
+    monkeypatch.setattr("rapid_api_client.xml.pydantic_xml", None)
+    with raises(ImportError, match="pydantic-xml must be installed"):
+        PydanticXmlBody()
