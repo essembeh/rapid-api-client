@@ -1,8 +1,10 @@
+import os
 from typing import Any
 
 from pydantic import BaseModel, Field, HttpUrl, IPvAnyAddress
 
-BASE_URL = "https://httpbingo.org"
+# local go-httpbin by default (see `just httpbin`), same implementation as https://httpbingo.org
+BASE_URL = os.environ.get("HTTPBIN_URL", "https://httpbingo.org")
 
 
 class Infos(BaseModel):

@@ -21,6 +21,13 @@ jobs:
   test:
     name: Unit tests
     runs-on: ubuntu-latest
+    services:
+      httpbin:
+        image: ghcr.io/mccutchen/go-httpbin
+        ports:
+          - 18080:8080
+    env:
+      HTTPBIN_URL: http://localhost:18080
     strategy:
       fail-fast: false
       matrix:
