@@ -17,7 +17,6 @@ from inspect import BoundArguments, Parameter, Signature
 from typing import (
     Any,
     Generic,
-    Self,
 )
 
 from pydantic import TypeAdapter
@@ -138,7 +137,7 @@ class ParameterManager:
     body_parameters: list[RapidParameter[Body]] = field(default_factory=list)
 
     @classmethod
-    def from_sig(cls, sig: Signature) -> Self:
+    def from_sig(cls, sig: Signature) -> "ParameterManager":
         """
         Create a ParameterManager from a function signature.
 

@@ -1,4 +1,5 @@
 import asyncio
+import sys
 
 from httpx import AsyncClient
 from pytest import mark
@@ -27,6 +28,7 @@ async def test_default_client() -> None:
     assert infos.method == "GET"
 
 
+@mark.skipif(sys.version_info < (3, 11), reason="asyncio.TaskGroup requires Python 3.11")
 @mark.asyncio(loop_scope="module")
 async def test_taskgroup() -> None:
     api = HttpBinApi(base_url=BASE_URL)
@@ -44,7 +46,6 @@ async def test_taskgroup() -> None:
 async def test_gather() -> None:
     api = HttpBinApi(base_url=BASE_URL)
 
-    asyncio.gather()
     tasks = await asyncio.gather(*[api.get() for _ in range(3)])
 
     assert len(tasks) == 3
