@@ -3,40 +3,45 @@ name: Build & Tests
 on: [push]
 
 jobs:
+  # mirrors `just check`
+  check:
+    name: Lint, format and typing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run --no-sync ruff format --check src tests
+      - run: uv run --no-sync ruff check src tests
+      - run: uv run --no-sync -- mypy src tests
+
+  # mirrors `just test`
   test:
-    name: Build and test App
+    name: Unit tests
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
         with:
-          fail-fast: false
+          enable-cache: true
           python-version: ${{ matrix.python-version }}
-          cache: "pip"
-      - name: Install uv
-        run: pip install uv
-      - name: Test app
-        run: |
-          uv sync --frozen
-          uv run -- pytest --cov=rapid_api_client tests/
-          uv run -- coverage report
-          uv run -- coverage xml
+      - run: uv sync --locked
+      - run: uv run --no-sync -- pytest --cov=rapid_api_client --cov-report=term-missing tests/
 
   publish:
     name: Publish App on PyPI
     if: startsWith(github.ref, 'refs/tags/')
-    needs: test
+    needs: [check, test]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.14"
-      - name: Install uv
-        run: pip install uv
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
       - name: Publish app
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
