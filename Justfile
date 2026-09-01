@@ -33,6 +33,20 @@ outdated:
     uv tree --outdated --depth 1
     GITHUB_TOKEN=$(gh auth token) uvx gha-update
 
+# Bump the version, commit and tag — publishing happens in CI when the tag is pushed
+release bump="patch":
+    echo "{{bump}}" | grep -E "^(major|minor|patch)$"
+    uv version --bump "{{bump}}"
+    git add pyproject.toml uv.lock
+    git commit --message "🔖 New release: `uv version --short`"
+    git tag "`uv version --short`"
+
+[confirm('Confirm push --tags ?')]
+publish:
+    git log -1 --pretty="%B" | grep '^🔖 New release: '
+    git push
+    git push --tags
+
 # Same, with a browsable HTML coverage report
 test-html pytest_args="":
     uv run -- pytest --cov=rapid_api_client --cov-report=html {{pytest_args}} tests/
