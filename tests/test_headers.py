@@ -41,7 +41,7 @@ async def test_header_default_pydantic() -> None:
     assert infos.headers["Myheader"] == ["bar"]
 
     with raises(ValidationError):
-        await api.test(None)
+        await api.test(None)  # type: ignore[arg-type]  # deliberately invalid value
 
 
 @mark.asyncio(loop_scope="module")
@@ -62,7 +62,7 @@ async def test_header_default_factory() -> None:
     assert infos.headers["Myheader"] == ["bar"]
 
     with raises(ValidationError):
-        await api.test(None)
+        await api.test(None)  # type: ignore[arg-type]  # deliberately invalid value
 
 
 @mark.asyncio(loop_scope="module")
@@ -80,7 +80,7 @@ async def test_header_default_python() -> None:
     assert infos.headers["Myheader"] == ["bar"]
 
     with raises(ValidationError):
-        await api.test(None)
+        await api.test(None)  # type: ignore[arg-type]  # deliberately invalid value
 
 
 @mark.asyncio(loop_scope="module")
@@ -152,7 +152,7 @@ async def test_header_validation() -> None:
 
     for bad_value in ["foobar", "fooo", 42, None]:
         with raises(ValidationError):
-            await api.test(bad_value)
+            await api.test(bad_value)  # type: ignore[arg-type]  # deliberately invalid values
 
 
 @mark.asyncio(loop_scope="module")

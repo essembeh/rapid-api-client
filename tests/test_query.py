@@ -155,7 +155,7 @@ async def test_query_validation() -> None:
 
     for bad_value in ["foobar", "fooo", 42, None]:
         with raises(ValidationError):
-            await api.test(bad_value)
+            await api.test(bad_value)  # type: ignore[arg-type]  # deliberately invalid values
 
 
 @mark.asyncio(loop_scope="module")

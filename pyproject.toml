@@ -66,6 +66,15 @@ strict = true                # strict bundle: do not redeclare its components
 warn_unreachable = true      # outside the strict bundle, but useful
 warn_redundant_casts = true
 
+# Both disabled codes are false positives by construction of the library:
+# - empty-body: API stubs (`@get(...) def foo(self) -> Model: ...`) are the core
+#   pattern, every test client method has an empty body.
+# - call-arg: Pydantic defaults (`Field(default=...)`) are applied at runtime by
+#   the library, mypy cannot see that such arguments are optional.
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disable_error_code = ["empty-body", "call-arg"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 

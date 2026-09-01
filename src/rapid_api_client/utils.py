@@ -11,7 +11,7 @@ useful for advanced use cases.
 """
 
 from inspect import Parameter
-from typing import Any, TypeVar, get_args, overload
+from typing import Any, TypeVar, cast, get_args, overload
 
 from pydantic.fields import FieldInfo
 
@@ -83,5 +83,6 @@ def find_annotation(param: Parameter, cls: type[RA] | type[FieldInfo]) -> RA | F
     if param.annotation:
         for an in get_args(param.annotation):
             if isinstance(an, cls) or issubclass(type(an), cls):
-                return an
+                # get_args() returns Any, the isinstance check above guarantees the type
+                return cast("RA | FieldInfo", an)
     return None

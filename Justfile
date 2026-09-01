@@ -3,10 +3,11 @@
 default:
     @just --list
 
-# Lint and format — mypy will join once strict typing is enforced
+# Lint, format and typing — the full static gate
 check:
     uv run ruff format --check src tests
     uv run ruff check src tests
+    uv run -- mypy src tests
 
 # Format and auto-fix what ruff can
 format:
@@ -21,7 +22,3 @@ test pytest_args="":
 test-html pytest_args="":
     uv run -- pytest --cov=rapid_api_client --cov-report=html {{pytest_args}} tests/
     xdg-open htmlcov/index.html
-
-# Strict typing gate — will join `check` once the codebase passes
-mypy:
-    uv run -- mypy src tests
