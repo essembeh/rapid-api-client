@@ -21,9 +21,7 @@ def test_sync_client_factory():
         def test_method(self): ...
 
     # Create API with custom client factory
-    api = TestApi(
-        base_url="https://example.com", timeout=30, client_factory=mock_factory
-    )
+    api = TestApi(base_url="https://example.com", timeout=30, client_factory=mock_factory)
 
     # Use the sync client context manager
     with api.sync_client() as client:
@@ -47,17 +45,13 @@ def test_async_client_factory():
         async def test_method(self): ...
 
     # Create API with custom async client factory
-    api = TestApi(
-        base_url="https://example.com", timeout=30, async_client_factory=mock_factory
-    )
+    api = TestApi(base_url="https://example.com", timeout=30, async_client_factory=mock_factory)
 
     # Use the async client context manager
     async def test_async():
         async with api.async_client() as client:
             # Verify factory was called with the factory args
-            mock_factory.assert_called_once_with(
-                base_url="https://example.com", timeout=30
-            )
+            mock_factory.assert_called_once_with(base_url="https://example.com", timeout=30)
             # Verify we got an AsyncClient instance
             assert isinstance(client, AsyncClient)
 

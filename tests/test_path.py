@@ -47,9 +47,7 @@ async def test_path_transformer():
         ) -> Infos: ...
 
         @get("/anything/{mypath}")
-        async def test_foo(
-            self, mypath: Annotated[datetime, Path(transformer=lambda x: "foo")]
-        ) -> Infos: ...
+        async def test_foo(self, mypath: Annotated[datetime, Path(transformer=lambda x: "foo")]) -> Infos: ...
 
     api = HttpBinApi(base_url=BASE_URL)
 

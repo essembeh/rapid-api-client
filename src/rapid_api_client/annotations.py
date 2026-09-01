@@ -368,9 +368,7 @@ class PydanticBody(Body):
 
     def __post_init__(self):
         if self.transformer is None:
-            self.transformer = partial(
-                BaseModel.model_dump_json, by_alias=True, exclude_none=True
-            )
+            self.transformer = partial(BaseModel.model_dump_json, by_alias=True, exclude_none=True)
 
 
 @dataclass(slots=True)

@@ -42,9 +42,7 @@ async def test_body_json():
         async def test(
             self,
             body: Annotated[Dict, JsonBody()],
-            content_type: Annotated[
-                str, Header(alias="content-type")
-            ] = "application/json",
+            content_type: Annotated[str, Header(alias="content-type")] = "application/json",
         ) -> Infos: ...
 
     api = HttpBinApi(base_url=BASE_URL)
@@ -214,27 +212,13 @@ async def test_body_pydantic_transformer():
         ) -> Infos: ...
 
         @post("/anything", headers={"content-type": "application/json"})
-        async def default_config(
-            self, body: Annotated[Data, PydanticBody()]
-        ) -> Infos: ...
+        async def default_config(self, body: Annotated[Data, PydanticBody()]) -> Infos: ...
 
     api = HttpBinApi(base_url=BASE_URL)
 
-    assert (
-        await api.test(Data())
-    ).data == '{"text_none":null,"text_empty":"","text_default":"42"}'
+    assert (await api.test(Data())).data == '{"text_none":null,"text_empty":"","text_default":"42"}'
     assert (await api.exclude_unset(Data())).data == "{}"
-    assert (
-        await api.exclude_defaults(
-            Data(text_default="42", text_empty="", text_none=None)
-        )
-    ).data == "{}"
-    assert (
-        await api.exclude_none(Data())
-    ).data == '{"text_empty":"","text_default":"42"}'
-    assert (
-        await api.default_config(Data(text_default=None))
-    ).data == '{"text_empty":""}'
-    assert (
-        await api.default_config(Data())
-    ).data == '{"text_empty":"","text_default":"42"}'
+    assert (await api.exclude_defaults(Data(text_default="42", text_empty="", text_none=None))).data == "{}"
+    assert (await api.exclude_none(Data())).data == '{"text_empty":"","text_default":"42"}'
+    assert (await api.default_config(Data(text_default=None))).data == '{"text_empty":""}'
+    assert (await api.default_config(Data())).data == '{"text_empty":"","text_default":"42"}'

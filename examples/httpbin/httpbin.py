@@ -63,9 +63,7 @@ async def main():
     print(infos.model_dump_json(indent=2))
 
     print("\nPOST form request:")
-    infos = await api.post_form(
-        "foo", "bar", extra_field={"extra": "field", "extra2": "field2"}
-    )
+    infos = await api.post_form("foo", "bar", extra_field={"extra": "field", "extra2": "field2"})
     print(infos.model_dump_json(indent=2))
 
     print("\nPOST model request:")

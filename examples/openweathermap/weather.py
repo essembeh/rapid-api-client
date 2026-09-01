@@ -119,9 +119,7 @@ def main():
         print(f"Humidity: {weather.main.humidity}%")
 
         # Get 5-day forecast
-        forecast = api.get_forecast(
-            q="London", appid=API_KEY, cnt=8
-        )  # Next 24 hours (3-hour steps)
+        forecast = api.get_forecast(q="London", appid=API_KEY, cnt=8)  # Next 24 hours (3-hour steps)
         print("\nForecast for the next 24 hours:")
         for item in forecast.list:
             print(f"{item.dt_txt}: {item.main.temp}°C, {item.weather[0].description}")

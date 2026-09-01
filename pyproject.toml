@@ -39,6 +39,9 @@ Issues = "https://github.com/essembeh/rapid-api-client/issues"
 requires = ["uv_build>=0.7.22,<0.8"]
 build-backend = "uv_build"
 
+[tool.ruff]
+line-length = 120
+
 [dependency-groups]
 dev = [
     "mypy>=1.18.2",

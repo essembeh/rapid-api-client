@@ -53,9 +53,7 @@ def find_annotation(param: Parameter, cls: Type[RA]) -> Optional[RA]: ...
 def find_annotation(param: Parameter, cls: Type[FieldInfo]) -> Optional[FieldInfo]: ...
 
 
-def find_annotation(
-    param: Parameter, cls: Union[Type[RA], Type[FieldInfo]]
-) -> Union[RA, FieldInfo, None]:
+def find_annotation(param: Parameter, cls: Union[Type[RA], Type[FieldInfo]]) -> Union[RA, FieldInfo, None]:
     """
     Find an annotation of a specific type in a parameter's annotation.
 

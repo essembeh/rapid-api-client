@@ -26,9 +26,7 @@ class GithubIssuesApi(RapidApi):
         repo: Annotated[str, Path()],
         state: Annotated[str | None, Query()] = None,
         sort: Annotated[str | None, Query()] = "updated",
-        github_version: Annotated[
-            str, Header(alias="X-GitHub-Api-Version")
-        ] = "2022-11-28",
+        github_version: Annotated[str, Header(alias="X-GitHub-Api-Version")] = "2022-11-28",
     ) -> List[Issue]: ...
 
 

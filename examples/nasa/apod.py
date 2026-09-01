@@ -126,31 +126,19 @@ def main():
             print(f"Found {len(asteroids)} asteroids approaching Earth today")
 
             for i, asteroid in enumerate(asteroids[:3], 1):  # Show only first 3
-                hazardous = (
-                    "🚨 POTENTIALLY HAZARDOUS"
-                    if asteroid.is_potentially_hazardous_asteroid
-                    else "Safe"
-                )
+                hazardous = "🚨 POTENTIALLY HAZARDOUS" if asteroid.is_potentially_hazardous_asteroid else "Safe"
                 print(f"{i}. {asteroid.name} - {hazardous}")
 
                 if asteroid.close_approach_data:
                     approach = asteroid.close_approach_data[0]
                     distance_km = float(approach["miss_distance"]["kilometers"])
-                    velocity_kph = float(
-                        approach["relative_velocity"]["kilometers_per_hour"]
-                    )
+                    velocity_kph = float(approach["relative_velocity"]["kilometers_per_hour"])
                     print(f"   Miss Distance: {distance_km:,.0f} km")
                     print(f"   Velocity: {velocity_kph:,.0f} km/h")
 
-                min_diameter = asteroid.estimated_diameter["kilometers"][
-                    "estimated_diameter_min"
-                ]
-                max_diameter = asteroid.estimated_diameter["kilometers"][
-                    "estimated_diameter_max"
-                ]
-                print(
-                    f"   Estimated Diameter: {min_diameter:.2f} - {max_diameter:.2f} km"
-                )
+                min_diameter = asteroid.estimated_diameter["kilometers"]["estimated_diameter_min"]
+                max_diameter = asteroid.estimated_diameter["kilometers"]["estimated_diameter_max"]
+                print(f"   Estimated Diameter: {min_diameter:.2f} - {max_diameter:.2f} km")
 
         # Get Mars Rover photos
         print("\nLatest Mars Curiosity Rover Photos:")
@@ -164,9 +152,7 @@ def main():
 
     except Exception as e:
         print(f"Error: {e}")
-        print(
-            "Note: Using DEMO_KEY has strict rate limits. Get your own API key at https://api.nasa.gov/"
-        )
+        print("Note: Using DEMO_KEY has strict rate limits. Get your own API key at https://api.nasa.gov/")
 
 
 if __name__ == "__main__":

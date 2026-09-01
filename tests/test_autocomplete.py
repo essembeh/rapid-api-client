@@ -33,9 +33,7 @@ class UserApiForTesting(RapidApi):
         ...
 
     @get("/users")
-    def list_users(
-        self, page: Annotated[int, Query()] = 1, limit: Annotated[int, Query()] = 10
-    ) -> List[User]:
+    def list_users(self, page: Annotated[int, Query()] = 1, limit: Annotated[int, Query()] = 10) -> List[User]:
         """List users with pagination"""
         ...
 

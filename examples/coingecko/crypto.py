@@ -62,9 +62,7 @@ class CoinGeckoApi(RapidApi):
     def get_coin_markets(
         self,
         vs_currency: Annotated[str, Query()] = "usd",
-        ids: Annotated[
-            Optional[str], Query()
-        ] = None,  # Comma-separated list of coin IDs
+        ids: Annotated[Optional[str], Query()] = None,  # Comma-separated list of coin IDs
         order: Annotated[str, Query()] = "market_cap_desc",
         per_page: Annotated[int, Query()] = 100,
         page: Annotated[int, Query()] = 1,
@@ -97,21 +95,11 @@ def main():
         print("Global Cryptocurrency Market Data:")
         print(f"Active Cryptocurrencies: {global_data.data.active_cryptocurrencies}")
         print(f"Active Markets: {global_data.data.markets}")
-        print(
-            f"Total Market Cap (USD): ${global_data.data.total_market_cap.get('usd', 0):,.2f}"
-        )
-        print(
-            f"Total 24h Volume (USD): ${global_data.data.total_volume.get('usd', 0):,.2f}"
-        )
-        print(
-            f"BTC Dominance: {global_data.data.market_cap_percentage.get('btc', 0):.2f}%"
-        )
-        print(
-            f"ETH Dominance: {global_data.data.market_cap_percentage.get('eth', 0):.2f}%"
-        )
-        print(
-            f"Last Updated: {datetime.fromtimestamp(global_data.data.updated_at).strftime('%Y-%m-%d %H:%M:%S')}"
-        )
+        print(f"Total Market Cap (USD): ${global_data.data.total_market_cap.get('usd', 0):,.2f}")
+        print(f"Total 24h Volume (USD): ${global_data.data.total_volume.get('usd', 0):,.2f}")
+        print(f"BTC Dominance: {global_data.data.market_cap_percentage.get('btc', 0):.2f}%")
+        print(f"ETH Dominance: {global_data.data.market_cap_percentage.get('eth', 0):.2f}%")
+        print(f"Last Updated: {datetime.fromtimestamp(global_data.data.updated_at).strftime('%Y-%m-%d %H:%M:%S')}")
 
         # Get top 5 cryptocurrencies by market cap
         print("\nTop 5 Cryptocurrencies by Market Cap:")
@@ -127,28 +115,16 @@ def main():
         bitcoin = api.get_coin_details("bitcoin")
         print(f"Name: {bitcoin.name} ({bitcoin.symbol.upper()})")
         if bitcoin.description and "en" in bitcoin.description:
-            description = (
-                bitcoin.description["en"].split(". ")[0] + "."
-            )  # First sentence only
+            description = bitcoin.description["en"].split(". ")[0] + "."  # First sentence only
             print(f"Description: {description}")
         if bitcoin.market_data:
-            print(
-                f"Current Price (USD): ${bitcoin.market_data.current_price.get('usd', 0):,.2f}"
-            )
-            print(
-                f"Market Cap (USD): ${bitcoin.market_data.market_cap.get('usd', 0):,.2f}"
-            )
-            print(
-                f"24h Volume (USD): ${bitcoin.market_data.total_volume.get('usd', 0):,.2f}"
-            )
+            print(f"Current Price (USD): ${bitcoin.market_data.current_price.get('usd', 0):,.2f}")
+            print(f"Market Cap (USD): ${bitcoin.market_data.market_cap.get('usd', 0):,.2f}")
+            print(f"24h Volume (USD): ${bitcoin.market_data.total_volume.get('usd', 0):,.2f}")
             if bitcoin.market_data.price_change_percentage_24h:
-                print(
-                    f"24h Change: {bitcoin.market_data.price_change_percentage_24h:.2f}%"
-                )
+                print(f"24h Change: {bitcoin.market_data.price_change_percentage_24h:.2f}%")
             if bitcoin.market_data.price_change_percentage_7d:
-                print(
-                    f"7d Change: {bitcoin.market_data.price_change_percentage_7d:.2f}%"
-                )
+                print(f"7d Change: {bitcoin.market_data.price_change_percentage_7d:.2f}%")
 
     except Exception as e:
         print(f"Error: {e}")

@@ -143,7 +143,4 @@ def test_rapid_and_rapid_default_equivalence():
 
     # Check that both behave identically
     assert api_default._factory_args["base_url"] == api_rapid._factory_args["base_url"]
-    assert (
-        api_default._factory_args["headers"]["X-Test"]
-        == api_rapid._factory_args["headers"]["X-Test"]
-    )
+    assert api_default._factory_args["headers"]["X-Test"] == api_rapid._factory_args["headers"]["X-Test"]

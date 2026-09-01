@@ -30,9 +30,7 @@ async def test_headers():
 async def test_header_default_pydantic():
     class HttpBinApi(RapidApi):
         @get("/anything")
-        async def test(
-            self, myheader: Annotated[str, Header(), Field(default="bar")]
-        ) -> Infos: ...
+        async def test(self, myheader: Annotated[str, Header(), Field(default="bar")]) -> Infos: ...
 
     api = HttpBinApi(base_url=BASE_URL)
 
@@ -114,9 +112,7 @@ async def test_header_alias():
             self,
             myheader1: Annotated[str, Header(alias="mycustomheader1")],
             myheader2: Annotated[str, Header(), Field(alias="mycustomheader2")],
-            myheader3: Annotated[
-                str, Header(alias="mycustomheader3a"), Field(alias="mycustomheader3b")
-            ],
+            myheader3: Annotated[str, Header(alias="mycustomheader3a"), Field(alias="mycustomheader3b")],
         ) -> Infos: ...
 
     api = HttpBinApi(base_url=BASE_URL)
@@ -135,9 +131,7 @@ async def test_header_alias():
 async def test_header_override():
     class HttpBinApi(RapidApi):
         @get("/anything", headers={"myheader": "foo"})
-        async def test(
-            self, myheader: Annotated[str | None, Header()] = None
-        ) -> Infos: ...
+        async def test(self, myheader: Annotated[str | None, Header()] = None) -> Infos: ...
 
     api = HttpBinApi(base_url=BASE_URL)
 
@@ -152,9 +146,7 @@ async def test_header_override():
 async def test_header_validation():
     class HttpBinApi(RapidApi):
         @get("/anything")
-        async def test(
-            self, myheader: Annotated[str, Header(), Field(max_length=3)] = "bar"
-        ) -> Infos: ...
+        async def test(self, myheader: Annotated[str, Header(), Field(max_length=3)] = "bar") -> Infos: ...
 
     api = HttpBinApi(base_url=BASE_URL)
 
@@ -167,9 +159,7 @@ async def test_header_validation():
 async def test_header_transformer():
     class HttpBinApi(RapidApi):
         @get("/anything")
-        async def test_default(
-            self, myheader: Annotated[datetime, Header()]
-        ) -> Infos: ...
+        async def test_default(self, myheader: Annotated[datetime, Header()]) -> Infos: ...
 
         @get("/anything")
         async def test_custom(
@@ -178,9 +168,7 @@ async def test_header_transformer():
         ) -> Infos: ...
 
         @get("/anything")
-        async def test_foo(
-            self, myheader: Annotated[datetime, Header(transformer=lambda x: "foo")]
-        ) -> Infos: ...
+        async def test_foo(self, myheader: Annotated[datetime, Header(transformer=lambda x: "foo")]) -> Infos: ...
 
     api = HttpBinApi(base_url=BASE_URL)
 

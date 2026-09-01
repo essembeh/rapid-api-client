@@ -26,7 +26,5 @@ def check_pydantic_xml_installed():
 
 
 pydantic_xml_transformer: Optional[Callable[[Any], Any]] = (
-    partial(pydantic_xml.BaseXmlModel.to_xml, exclude_none=True)
-    if pydantic_xml
-    else None
+    partial(pydantic_xml.BaseXmlModel.to_xml, exclude_none=True) if pydantic_xml else None
 )

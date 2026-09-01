@@ -141,17 +141,12 @@ async def test_body_pydanticxml_serializer():
         == '<data text_null="" text_empty="" text_default="42"><sub_empty /><sub_none /><sub_default>42</sub_default></data>'
     )
     assert (
-        (await api.skip_empty(Data())).data
-        == '<data text_empty="" text_default="42"><sub_default>42</sub_default></data>'
-    )
+        await api.skip_empty(Data())
+    ).data == '<data text_empty="" text_default="42"><sub_default>42</sub_default></data>'
     assert (
-        (await api.exclude_none(Data())).data
-        == '<data text_empty="" text_default="42"><sub_empty /><sub_default>42</sub_default></data>'
-    )
+        await api.exclude_none(Data())
+    ).data == '<data text_empty="" text_default="42"><sub_empty /><sub_default>42</sub_default></data>'
+    assert (await api.exclude_unset(Data(text_none=None))).data == '<data text_null="" />'
     assert (
-        await api.exclude_unset(Data(text_none=None))
-    ).data == '<data text_null="" />'
-    assert (
-        (await api.default_config(Data())).data
-        == '<data text_empty="" text_default="42"><sub_empty /><sub_default>42</sub_default></data>'
-    )
+        await api.default_config(Data())
+    ).data == '<data text_empty="" text_default="42"><sub_empty /><sub_default>42</sub_default></data>'

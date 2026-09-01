@@ -10,19 +10,13 @@ from .conftest import BASE_URL, Infos
 
 class MyApi(RapidApi):
     @get("/anything/{param}")
-    async def test_path(
-        self, param: Annotated[PositiveInt, Path(), Field(le=12)]
-    ) -> Infos: ...
+    async def test_path(self, param: Annotated[PositiveInt, Path(), Field(le=12)]) -> Infos: ...
 
     @get("/anything")
-    async def test_query(
-        self, param: Annotated[PositiveInt, Query(), Field(le=12)]
-    ) -> Infos: ...
+    async def test_query(self, param: Annotated[PositiveInt, Query(), Field(le=12)]) -> Infos: ...
 
     @get("/anything")
-    async def test_header(
-        self, param: Annotated[PositiveInt, Header(), Field(le=12)]
-    ) -> Infos: ...
+    async def test_header(self, param: Annotated[PositiveInt, Header(), Field(le=12)]) -> Infos: ...
 
 
 @mark.asyncio(loop_scope="module")

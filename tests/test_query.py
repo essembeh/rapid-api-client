@@ -32,9 +32,7 @@ async def test_query():
 async def test_query_default_pydantic():
     class HttpBinApi(RapidApi):
         @get("/anything")
-        async def test(
-            self, myparam: Annotated[str, Query(), Field(default="bar")]
-        ) -> Infos: ...
+        async def test(self, myparam: Annotated[str, Query(), Field(default="bar")]) -> Infos: ...
 
     api = HttpBinApi(base_url=BASE_URL)
 
@@ -53,9 +51,7 @@ async def test_query_default_pydantic():
 async def test_query_default_factory():
     class HttpBinApi(RapidApi):
         @get("/anything")
-        async def test(
-            self, myparam: Annotated[str, Query(), Field(default_factory=lambda: "bar")]
-        ) -> Infos: ...
+        async def test(self, myparam: Annotated[str, Query(), Field(default_factory=lambda: "bar")]) -> Infos: ...
 
     api = HttpBinApi(base_url=BASE_URL)
 
@@ -120,9 +116,7 @@ async def test_query_alias():
             self,
             myparam1: Annotated[str, Query(alias="mycustomparam1")],
             myparam2: Annotated[str, Query(), Field(alias="mycustomparam2")],
-            myparam3: Annotated[
-                str, Query(alias="mycustomparam3a"), Field(alias="mycustomparam3b")
-            ],
+            myparam3: Annotated[str, Query(alias="mycustomparam3a"), Field(alias="mycustomparam3b")],
         ) -> Infos: ...
 
     api = HttpBinApi(base_url=BASE_URL)
@@ -141,9 +135,7 @@ async def test_query_alias():
 async def test_query_alias2():
     class HttpBinApi(RapidApi):
         @get("/anything")
-        async def test(
-            self, myparam: Annotated[str, Query(alias="otherparam")]
-        ) -> Infos: ...
+        async def test(self, myparam: Annotated[str, Query(alias="otherparam")]) -> Infos: ...
 
     api = HttpBinApi(base_url=BASE_URL)
 
@@ -157,9 +149,7 @@ async def test_query_alias2():
 async def test_query_validation():
     class HttpBinApi(RapidApi):
         @get("/anything")
-        async def test(
-            self, myparam: Annotated[str, Query(), Field(max_length=3)] = "bar"
-        ) -> Infos: ...
+        async def test(self, myparam: Annotated[str, Query(), Field(max_length=3)] = "bar") -> Infos: ...
 
     api = HttpBinApi(base_url=BASE_URL)
 
@@ -172,9 +162,7 @@ async def test_query_validation():
 async def test_query_transformer():
     class HttpBinApi(RapidApi):
         @get("/anything")
-        async def test_default(
-            self, myparam: Annotated[datetime, Query()]
-        ) -> Infos: ...
+        async def test_default(self, myparam: Annotated[datetime, Query()]) -> Infos: ...
 
         @get("/anything")
         async def test_custom(
@@ -183,9 +171,7 @@ async def test_query_transformer():
         ) -> Infos: ...
 
         @get("/anything")
-        async def test_foo(
-            self, myparam: Annotated[datetime, Query(transformer=lambda x: "foo")]
-        ) -> Infos: ...
+        async def test_foo(self, myparam: Annotated[datetime, Query(transformer=lambda x: "foo")]) -> Infos: ...
 
     api = HttpBinApi(base_url=BASE_URL)
 

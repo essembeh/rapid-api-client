@@ -135,9 +135,7 @@ class RapidApi:
             async with factory(**self._factory_args) as client:
                 yield client
 
-    def build_request(
-        self, client: Union[Client, AsyncClient], *, method: str, url: str, **kwargs
-    ) -> Request:
+    def build_request(self, client: Union[Client, AsyncClient], *, method: str, url: str, **kwargs) -> Request:
         """
         Build an HTTP request using the provided client.
 

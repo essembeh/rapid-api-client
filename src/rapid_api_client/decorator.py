@@ -68,14 +68,10 @@ def http(
     def decorator(func: F) -> F:
         sig = signature(func)
         parameter_manager = ParameterManager.from_sig(sig)
-        response_class = (
-            sig.return_annotation if sig.return_annotation != sig.empty else Response
-        )
+        response_class = sig.return_annotation if sig.return_annotation != sig.empty else Response
         is_async = inspect.iscoroutinefunction(func)
 
-        def prepare_request(
-            api: RapidApi, client: Union[Client, AsyncClient], args, kwargs
-        ):
+        def prepare_request(api: RapidApi, client: Union[Client, AsyncClient], args, kwargs):
             assert isinstance(api, RapidApi), f"{api} should be an instance of RapidApi"
 
             # valuate arguments from args and kwargs
@@ -100,27 +96,21 @@ def http(
                 for k, v in headers.items():
                     build_kwargs["headers"].setdefault(k, v)
 
-            return api.build_request(
-                client, method=method, url=resolved_path, **build_kwargs
-            )
+            return api.build_request(client, method=method, url=resolved_path, **build_kwargs)
 
         @wraps(func)
         async def async_wrapper(api: RapidApi, *args, **kwargs):
             async with api.async_client() as async_client:
                 request = prepare_request(api, async_client, args, kwargs)
                 response = await async_client.send(request)
-                return api.process_response(
-                    response, response_class, raise_for_status=raise_for_status
-                )
+                return api.process_response(response, response_class, raise_for_status=raise_for_status)
 
         @wraps(func)
         def wrapper(api: RapidApi, *args, **kwargs):
             with api.sync_client() as sync_client:
                 request = prepare_request(api, sync_client, args, kwargs)
                 response = sync_client.send(request)
-                return api.process_response(
-                    response, response_class, raise_for_status=raise_for_status
-                )
+                return api.process_response(response, response_class, raise_for_status=raise_for_status)
 
         return async_wrapper if is_async else wrapper  # type: ignore
 

@@ -196,9 +196,7 @@ class ParameterManager:
                         )
                     )
                 else:
-                    raise AnnotationError(
-                        f"Invalid parameter annotation: {rapid_annotation}"
-                    )
+                    raise AnnotationError(f"Invalid parameter annotation: {rapid_annotation}")
 
         # consistency check for body parameters
         if len(out.body_parameters) > 0:
@@ -233,9 +231,7 @@ class ParameterManager:
         Returns:
             The resolved URL path with parameter values substituted
         """
-        path_params = filter_none_values(
-            {p.get_name(): p.get_value(ba) for p in self.path_parameters}
-        )
+        path_params = filter_none_values({p.get_name(): p.get_value(ba) for p in self.path_parameters})
         return path.format(**path_params)
 
     def get_headers(self, ba: BoundArguments) -> Dict[str, Any]:
@@ -248,9 +244,7 @@ class ParameterManager:
         Returns:
             A dictionary of HTTP headers
         """
-        return filter_none_values(
-            {p.get_name(): p.get_value(ba) for p in self.header_parameters}
-        )
+        return filter_none_values({p.get_name(): p.get_value(ba) for p in self.header_parameters})
 
     def get_query(self, ba: BoundArguments) -> Dict[str, Any]:
         """
@@ -262,9 +256,7 @@ class ParameterManager:
         Returns:
             A dictionary of query parameters
         """
-        return filter_none_values(
-            {p.get_name(): p.get_value(ba) for p in self.query_parameters}
-        )
+        return filter_none_values({p.get_name(): p.get_value(ba) for p in self.query_parameters})
 
     def get_body(self, ba: BoundArguments) -> Tuple[str | None, Any]:
         """
@@ -291,9 +283,7 @@ class ParameterManager:
 
             if isinstance(first_body_param.rapid_annotation, FileBody):
                 # Case "files", one or more files can be provided
-                values = filter_none_values(
-                    {p.get_name(): p.get_value(ba) for p in self.body_parameters}
-                )
+                values = filter_none_values({p.get_name(): p.get_value(ba) for p in self.body_parameters})
                 if len(values) > 0:
                     return first_body_param.rapid_annotation.keyword, values
             elif isinstance(first_body_param.rapid_annotation, FormBody):
