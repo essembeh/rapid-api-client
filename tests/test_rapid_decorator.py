@@ -4,18 +4,18 @@ Tests for the @rapid and @rapid_default decorators.
 
 import warnings
 
-from httpx import Client
+from httpx import Client, Response
 
 from rapid_api_client import RapidApi, get, rapid, rapid_default
 
 
-def test_rapid_default_decorator_base_url():
+def test_rapid_default_decorator_base_url() -> None:
     """Test that the @rapid_default decorator sets the base_url correctly."""
 
     @rapid_default(base_url="https://example.com")
     class TestApi(RapidApi):
         @get("/test")
-        def test_method(self): ...
+        def test_method(self) -> Response: ...
 
     # Create an instance without specifying base_url
     api = TestApi()
@@ -24,13 +24,13 @@ def test_rapid_default_decorator_base_url():
     assert api._factory_args["base_url"] == "https://example.com"
 
 
-def test_rapid_default_decorator_headers():
+def test_rapid_default_decorator_headers() -> None:
     """Test that the @rapid_default decorator sets the headers correctly."""
 
     @rapid_default(headers={"X-Test": "test-value"})
     class TestApi(RapidApi):
         @get("/test")
-        def test_method(self): ...
+        def test_method(self) -> Response: ...
 
     # Create an instance without specifying headers
     api = TestApi()
@@ -39,7 +39,7 @@ def test_rapid_default_decorator_headers():
     assert api._factory_args["headers"]["X-Test"] == "test-value"
 
 
-def test_rapid_default_decorator_override():
+def test_rapid_default_decorator_override() -> None:
     """Test that instance parameters override decorator parameters."""
 
     @rapid_default(
@@ -48,7 +48,7 @@ def test_rapid_default_decorator_override():
     )
     class TestApi(RapidApi):
         @get("/test")
-        def test_method(self): ...
+        def test_method(self) -> Response: ...
 
     # Create an instance with overridden parameters
     api = TestApi(
@@ -65,13 +65,13 @@ def test_rapid_default_decorator_override():
     assert api._factory_args["headers"]["X-Common"] == "instance-value"
 
 
-def test_rapid_default_decorator_with_client():
+def test_rapid_default_decorator_with_client() -> None:
     """Test that the @rapid_default decorator works with a provided client."""
 
     @rapid_default(base_url="https://example.com")
     class TestApi(RapidApi):
         @get("/test")
-        def test_method(self): ...
+        def test_method(self) -> Response: ...
 
     # Create a client
     client = Client(base_url="https://client.com")
@@ -83,7 +83,7 @@ def test_rapid_default_decorator_with_client():
     assert api._client is client
 
 
-def test_rapid_decorator_deprecation_warning():
+def test_rapid_decorator_deprecation_warning() -> None:
     """Test that the @rapid decorator raises a deprecation warning."""
 
     with warnings.catch_warnings(record=True) as w:
@@ -92,7 +92,7 @@ def test_rapid_decorator_deprecation_warning():
         @rapid(base_url="https://example.com")
         class TestApi(RapidApi):
             @get("/test")
-            def test_method(self): ...
+            def test_method(self) -> Response: ...
 
         # Check that a deprecation warning was raised
         assert len(w) == 1
@@ -101,7 +101,7 @@ def test_rapid_decorator_deprecation_warning():
         assert "rapid_default" in str(w[0].message)
 
 
-def test_rapid_decorator_still_works():
+def test_rapid_decorator_still_works() -> None:
     """Test that the deprecated @rapid decorator still works functionally."""
 
     with warnings.catch_warnings():
@@ -110,7 +110,7 @@ def test_rapid_decorator_still_works():
         @rapid(base_url="https://example.com")
         class TestApi(RapidApi):
             @get("/test")
-            def test_method(self): ...
+            def test_method(self) -> Response: ...
 
         # Create an instance without specifying base_url
         api = TestApi()
@@ -119,14 +119,14 @@ def test_rapid_decorator_still_works():
         assert api._factory_args["base_url"] == "https://example.com"
 
 
-def test_rapid_and_rapid_default_equivalence():
+def test_rapid_and_rapid_default_equivalence() -> None:
     """Test that @rapid and @rapid_default produce the same results."""
 
     # Test with rapid_default
     @rapid_default(base_url="https://example.com", headers={"X-Test": "test"})
     class TestApiDefault(RapidApi):
         @get("/test")
-        def test_method(self): ...
+        def test_method(self) -> Response: ...
 
     # Test with deprecated rapid (suppress warnings)
     with warnings.catch_warnings():
@@ -135,7 +135,7 @@ def test_rapid_and_rapid_default_equivalence():
         @rapid(base_url="https://example.com", headers={"X-Test": "test"})
         class TestApiRapid(RapidApi):
             @get("/test")
-            def test_method(self): ...
+            def test_method(self) -> Response: ...
 
     # Create instances
     api_default = TestApiDefault()

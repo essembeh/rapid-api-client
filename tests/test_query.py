@@ -10,7 +10,7 @@ from .conftest import BASE_URL, Infos
 
 
 @mark.asyncio(loop_scope="module")
-async def test_query():
+async def test_query() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test(
@@ -29,7 +29,7 @@ async def test_query():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_query_default_pydantic():
+async def test_query_default_pydantic() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test(self, myparam: Annotated[str, Query(), Field(default="bar")]) -> Infos: ...
@@ -48,7 +48,7 @@ async def test_query_default_pydantic():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_query_default_factory():
+async def test_query_default_factory() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test(self, myparam: Annotated[str, Query(), Field(default_factory=lambda: "bar")]) -> Infos: ...
@@ -67,7 +67,7 @@ async def test_query_default_factory():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_query_default_python():
+async def test_query_default_python() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test(self, myparam: Annotated[str, Query()] = "bar") -> Infos: ...
@@ -86,7 +86,7 @@ async def test_query_default_python():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_query_none():
+async def test_query_none() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test(
@@ -109,7 +109,7 @@ async def test_query_none():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_query_alias():
+async def test_query_alias() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test(
@@ -132,7 +132,7 @@ async def test_query_alias():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_query_alias2():
+async def test_query_alias2() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test(self, myparam: Annotated[str, Query(alias="otherparam")]) -> Infos: ...
@@ -146,7 +146,7 @@ async def test_query_alias2():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_query_validation():
+async def test_query_validation() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test(self, myparam: Annotated[str, Query(), Field(max_length=3)] = "bar") -> Infos: ...
@@ -159,7 +159,7 @@ async def test_query_validation():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_query_transformer():
+async def test_query_transformer() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test_default(self, myparam: Annotated[datetime, Query()]) -> Infos: ...

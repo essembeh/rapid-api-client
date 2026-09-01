@@ -10,13 +10,13 @@ class HttpBinApi(RapidApi):
     def get(self) -> Infos: ...
 
 
-def test_client():
+def test_client() -> None:
     api = HttpBinApi(client=Client(base_url=BASE_URL))
     infos = api.get()
     assert infos.method == "GET"
 
 
-def test_default_client():
+def test_default_client() -> None:
     api = HttpBinApi(base_url=BASE_URL)
     infos = api.get()
     assert infos.method == "GET"

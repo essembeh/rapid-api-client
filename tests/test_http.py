@@ -1,6 +1,6 @@
-from typing import Annotated
+from typing import Annotated, Any
 
-from httpx import AsyncClient, ReadTimeout
+from httpx import AsyncClient, Client, ReadTimeout, Request
 from pytest import mark, raises
 
 from rapid_api_client import Path, RapidApi, delete, get, patch, post, put
@@ -26,42 +26,42 @@ class HttpBinApi(RapidApi):
 
 
 @mark.asyncio(loop_scope="module")
-async def test_http_get():
+async def test_http_get() -> None:
     api = HttpBinApi(base_url=BASE_URL)
     infos = await api.get()
     assert infos.method == "GET"
 
 
 @mark.asyncio(loop_scope="module")
-async def test_http_post():
+async def test_http_post() -> None:
     api = HttpBinApi(base_url=BASE_URL)
     infos = await api.post()
     assert infos.method == "POST"
 
 
 @mark.asyncio(loop_scope="module")
-async def test_http_put():
+async def test_http_put() -> None:
     api = HttpBinApi(base_url=BASE_URL)
     infos = await api.put()
     assert infos.method == "PUT"
 
 
 @mark.asyncio(loop_scope="module")
-async def test_http_delete():
+async def test_http_delete() -> None:
     api = HttpBinApi(base_url=BASE_URL)
     infos = await api.delete()
     assert infos.method == "DELETE"
 
 
 @mark.asyncio(loop_scope="module")
-async def test_http_patch():
+async def test_http_patch() -> None:
     api = HttpBinApi(base_url=BASE_URL)
     infos = await api.patch()
     assert infos.method == "PATCH"
 
 
 @mark.asyncio(loop_scope="module")
-async def test_http_timeout():
+async def test_http_timeout() -> None:
     class HttpBinApi(RapidApi):
         @get("/delay/{delay}")
         async def delay(self, delay: Annotated[int, Path()]) -> Infos: ...
@@ -86,9 +86,9 @@ async def test_http_timeout():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_request_update():
+async def test_request_update() -> None:
     class HttpBinApiWithUpdate(RapidApi):
-        def build_request(self, client, *, method: str, url: str, **kwargs):
+        def build_request(self, client: Client | AsyncClient, *, method: str, url: str, **kwargs: Any) -> Request:
             request = super().build_request(client, method=method, url=url, **kwargs)
             request.headers["Myheader"] = "foo"
             return request

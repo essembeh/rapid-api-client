@@ -3,14 +3,15 @@ Tests for client_factory and async_client_factory parameters in RapidApi.
 """
 
 import asyncio
+from typing import Any
 from unittest.mock import Mock
 
-from httpx import AsyncClient, Client
+from httpx import AsyncClient, Client, Response
 
 from rapid_api_client import RapidApi, get
 
 
-def test_sync_client_factory():
+def test_sync_client_factory() -> None:
     """Test that client_factory is called when provided for sync clients."""
 
     # Create a mock factory that returns a real Client
@@ -18,7 +19,7 @@ def test_sync_client_factory():
 
     class TestApi(RapidApi):
         @get("/test")
-        def test_method(self): ...
+        def test_method(self) -> Response: ...
 
     # Create API with custom client factory
     api = TestApi(base_url="https://example.com", timeout=30, client_factory=mock_factory)
@@ -34,7 +35,7 @@ def test_sync_client_factory():
     mock_factory.return_value.close()
 
 
-def test_async_client_factory():
+def test_async_client_factory() -> None:
     """Test that async_client_factory is called when provided for async clients."""
 
     # Create a mock factory that returns a real AsyncClient
@@ -42,13 +43,13 @@ def test_async_client_factory():
 
     class TestApi(RapidApi):
         @get("/test")
-        async def test_method(self): ...
+        async def test_method(self) -> Response: ...
 
     # Create API with custom async client factory
     api = TestApi(base_url="https://example.com", timeout=30, async_client_factory=mock_factory)
 
     # Use the async client context manager
-    async def test_async():
+    async def test_async() -> None:
         async with api.async_client() as client:
             # Verify factory was called with the factory args
             mock_factory.assert_called_once_with(base_url="https://example.com", timeout=30)
@@ -61,12 +62,12 @@ def test_async_client_factory():
     asyncio.run(mock_factory.return_value.aclose())
 
 
-def test_default_sync_client_without_factory():
+def test_default_sync_client_without_factory() -> None:
     """Test that default Client constructor is used when no client_factory is provided."""
 
     class TestApi(RapidApi):
         @get("/test")
-        def test_method(self): ...
+        def test_method(self) -> Response: ...
 
     # Create API without custom client factory
     api = TestApi(base_url="https://example.com", timeout=30)
@@ -78,18 +79,18 @@ def test_default_sync_client_without_factory():
         assert str(client.base_url) == "https://example.com"
 
 
-def test_default_async_client_without_factory():
+def test_default_async_client_without_factory() -> None:
     """Test that default AsyncClient constructor is used when no async_client_factory is provided."""
 
     class TestApi(RapidApi):
         @get("/test")
-        async def test_method(self): ...
+        async def test_method(self) -> Response: ...
 
     # Create API without custom async client factory
     api = TestApi(base_url="https://example.com", timeout=30)
 
     # Use the async client context manager
-    async def test_async():
+    async def test_async() -> None:
         async with api.async_client() as client:
             # Verify we got an AsyncClient instance with correct base_url
             assert isinstance(client, AsyncClient)
@@ -98,7 +99,7 @@ def test_default_async_client_without_factory():
     asyncio.run(test_async())
 
 
-def test_provided_client_overrides_factory():
+def test_provided_client_overrides_factory() -> None:
     """Test that provided client instances override factories."""
 
     # Create mock factories
@@ -111,10 +112,10 @@ def test_provided_client_overrides_factory():
 
     class TestApi(RapidApi):
         @get("/test")
-        def test_sync(self): ...
+        def test_sync(self) -> Response: ...
 
         @get("/test")
-        async def test_async(self): ...
+        async def test_async(self) -> Response: ...
 
     # Create API with both provided clients and factories
     api = TestApi(
@@ -131,7 +132,7 @@ def test_provided_client_overrides_factory():
         mock_sync_factory.assert_not_called()
 
     # Test async client - should use provided client, not factory
-    async def test_async():
+    async def test_async() -> None:
         async with api.async_client() as client:
             assert client is provided_async_client
             mock_async_factory.assert_not_called()
@@ -145,17 +146,17 @@ def test_provided_client_overrides_factory():
     asyncio.run(mock_async_factory.return_value.aclose())
 
 
-def test_client_factory_with_different_args():
+def test_client_factory_with_different_args() -> None:
     """Test that factories receive the correct arguments."""
 
-    def custom_sync_factory(**kwargs):
+    def custom_sync_factory(**kwargs: Any) -> Client:
         # Verify we got the expected arguments
         assert kwargs["base_url"] == "https://custom.com"
         assert kwargs["timeout"] == 60
         assert kwargs["headers"]["X-Custom"] == "test"
         return Client(**kwargs)
 
-    def custom_async_factory(**kwargs):
+    def custom_async_factory(**kwargs: Any) -> AsyncClient:
         # Verify we got the expected arguments
         assert kwargs["base_url"] == "https://custom.com"
         assert kwargs["timeout"] == 60
@@ -164,10 +165,10 @@ def test_client_factory_with_different_args():
 
     class TestApi(RapidApi):
         @get("/test")
-        def test_sync(self): ...
+        def test_sync(self) -> Response: ...
 
         @get("/test")
-        async def test_async(self): ...
+        async def test_async(self) -> Response: ...
 
     # Create API with custom arguments
     api = TestApi(
@@ -183,19 +184,19 @@ def test_client_factory_with_different_args():
         assert isinstance(client, Client)
 
     # Test async factory
-    async def test_async():
+    async def test_async() -> None:
         async with api.async_client() as client:
             assert isinstance(client, AsyncClient)
 
     asyncio.run(test_async())
 
 
-def test_factory_type_annotations():
+def test_factory_type_annotations() -> None:
     """Test that factory parameters have correct type annotations."""
 
     class TestApi(RapidApi):
         @get("/test")
-        def test_method(self): ...
+        def test_method(self) -> Response: ...
 
     # This should not raise type errors if type checking is enabled
     api = TestApi(

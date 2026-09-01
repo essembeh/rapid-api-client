@@ -9,7 +9,7 @@ from .conftest import BASE_URL, Infos
 
 
 @mark.asyncio(loop_scope="module")
-async def test_path():
+async def test_path() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything/{myparam}")
         async def test(self, myparam: Annotated[str, Path()]) -> Infos: ...
@@ -21,7 +21,7 @@ async def test_path():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_path_default():
+async def test_path_default() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything/{myparam}")
         async def test(self, myparam: Annotated[str, Path()] = "bar") -> Infos: ...
@@ -36,7 +36,7 @@ async def test_path_default():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_path_transformer():
+async def test_path_transformer() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything/{mypath}")
         async def test_default(self, mypath: Annotated[datetime, Path()]) -> Infos: ...

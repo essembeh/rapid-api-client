@@ -16,12 +16,8 @@ from dataclasses import dataclass, field
 from inspect import BoundArguments, Parameter, Signature
 from typing import (
     Any,
-    Dict,
     Generic,
-    List,
-    Optional,
     Self,
-    Tuple,
 )
 
 from pydantic import TypeAdapter
@@ -57,7 +53,7 @@ class RapidParameter(Generic[RA]):
 
     parameter: Parameter
     rapid_annotation: RA
-    fieldinfo_annotation: Optional[FieldInfo]
+    fieldinfo_annotation: FieldInfo | None
 
     @property
     def name(self) -> str:
@@ -136,10 +132,10 @@ class ParameterManager:
         body_parameters: Parameters used in the request body
     """
 
-    path_parameters: List[RapidParameter[Path]] = field(default_factory=list)
-    query_parameters: List[RapidParameter[Query]] = field(default_factory=list)
-    header_parameters: List[RapidParameter[Header]] = field(default_factory=list)
-    body_parameters: List[RapidParameter[Body]] = field(default_factory=list)
+    path_parameters: list[RapidParameter[Path]] = field(default_factory=list)
+    query_parameters: list[RapidParameter[Query]] = field(default_factory=list)
+    header_parameters: list[RapidParameter[Header]] = field(default_factory=list)
+    body_parameters: list[RapidParameter[Body]] = field(default_factory=list)
 
     @classmethod
     def from_sig(cls, sig: Signature) -> Self:
@@ -203,20 +199,15 @@ class ParameterManager:
             first_body_param = out.body_parameters[0]
             if isinstance(first_body_param.rapid_annotation, (FileBody, FormBody)):
                 # FileBody/FormBody: check 1+ parameters of type FileBody
+                expected_type = type(first_body_param.rapid_annotation)
                 for other_param in out.body_parameters:
-                    if not isinstance(
-                        other_param.rapid_annotation,
-                        type(first_body_param.rapid_annotation),
-                    ):
-                        raise InvalidBodyError(
-                            f"All body parameters must be of type {first_body_param.rapid_annotation.__class__.__name__}"
-                        )
-            elif isinstance(first_body_param.rapid_annotation, Body):
+                    if not isinstance(other_param.rapid_annotation, expected_type):
+                        raise InvalidBodyError(f"All body parameters must be of type {expected_type.__name__}")
+            elif isinstance(first_body_param.rapid_annotation, Body) and len(out.body_parameters) > 1:
                 # Body: check 1 parameter of type Body
-                if len(out.body_parameters) > 1:
-                    raise InvalidBodyError(
-                        f"Only one Body allowed for type {first_body_param.rapid_annotation.__class__.__name__}"
-                    )
+                raise InvalidBodyError(
+                    f"Only one Body allowed for type {first_body_param.rapid_annotation.__class__.__name__}"
+                )
 
         return out
 
@@ -234,7 +225,7 @@ class ParameterManager:
         path_params = filter_none_values({p.get_name(): p.get_value(ba) for p in self.path_parameters})
         return path.format(**path_params)
 
-    def get_headers(self, ba: BoundArguments) -> Dict[str, Any]:
+    def get_headers(self, ba: BoundArguments) -> dict[str, Any]:
         """
         Get the HTTP headers from header parameters.
 
@@ -246,7 +237,7 @@ class ParameterManager:
         """
         return filter_none_values({p.get_name(): p.get_value(ba) for p in self.header_parameters})
 
-    def get_query(self, ba: BoundArguments) -> Dict[str, Any]:
+    def get_query(self, ba: BoundArguments) -> dict[str, Any]:
         """
         Get the query parameters.
 
@@ -258,7 +249,7 @@ class ParameterManager:
         """
         return filter_none_values({p.get_name(): p.get_value(ba) for p in self.query_parameters})
 
-    def get_body(self, ba: BoundArguments) -> Tuple[str | None, Any]:
+    def get_body(self, ba: BoundArguments) -> tuple[str | None, Any]:
         """
         Get the request body and its type.
 

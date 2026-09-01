@@ -11,7 +11,7 @@ useful for advanced use cases.
 """
 
 from inspect import Parameter
-from typing import Any, Dict, Optional, Type, TypeVar, Union, get_args, overload
+from typing import Any, TypeVar, get_args, overload
 
 from pydantic.fields import FieldInfo
 
@@ -21,7 +21,7 @@ T = TypeVar("T")
 RA = TypeVar("RA", bound=RapidAnnotation)
 
 
-def filter_none_values(values: Dict[str, Optional[Any]]) -> Dict[str, Any]:
+def filter_none_values(values: dict[str, Any | None]) -> dict[str, Any]:
     """
     Filter out None values from a dictionary.
 
@@ -46,14 +46,14 @@ def filter_none_values(values: Dict[str, Optional[Any]]) -> Dict[str, Any]:
 
 
 @overload
-def find_annotation(param: Parameter, cls: Type[RA]) -> Optional[RA]: ...
+def find_annotation(param: Parameter, cls: type[RA]) -> RA | None: ...
 
 
 @overload
-def find_annotation(param: Parameter, cls: Type[FieldInfo]) -> Optional[FieldInfo]: ...
+def find_annotation(param: Parameter, cls: type[FieldInfo]) -> FieldInfo | None: ...
 
 
-def find_annotation(param: Parameter, cls: Union[Type[RA], Type[FieldInfo]]) -> Union[RA, FieldInfo, None]:
+def find_annotation(param: Parameter, cls: type[RA] | type[FieldInfo]) -> RA | FieldInfo | None:
     """
     Find an annotation of a specific type in a parameter's annotation.
 

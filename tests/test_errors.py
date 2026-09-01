@@ -9,7 +9,7 @@ from .conftest import BASE_URL
 
 
 @mark.asyncio(loop_scope="module")
-async def test_response_unsupported():
+async def test_response_unsupported() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test(self) -> int: ...
@@ -21,7 +21,7 @@ async def test_response_unsupported():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_bad_constructor():
+async def test_bad_constructor() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test(self) -> Response: ...
@@ -33,10 +33,10 @@ async def test_bad_constructor():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_missing_parameter():
+async def test_missing_parameter() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything")
-        async def test(self, header: Annotated[str, Header()]): ...
+        async def test(self, header: Annotated[str, Header()]) -> Response: ...
 
     api = HttpBinApi(base_url=BASE_URL)
     with raises(ValueError):

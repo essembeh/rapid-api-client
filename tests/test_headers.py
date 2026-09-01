@@ -10,7 +10,7 @@ from .conftest import BASE_URL, Infos
 
 
 @mark.asyncio(loop_scope="module")
-async def test_headers():
+async def test_headers() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test(
@@ -27,7 +27,7 @@ async def test_headers():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_header_default_pydantic():
+async def test_header_default_pydantic() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test(self, myheader: Annotated[str, Header(), Field(default="bar")]) -> Infos: ...
@@ -45,7 +45,7 @@ async def test_header_default_pydantic():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_header_default_factory():
+async def test_header_default_factory() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test(
@@ -66,7 +66,7 @@ async def test_header_default_factory():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_header_default_python():
+async def test_header_default_python() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test(self, myheader: Annotated[str, Header()] = "bar") -> Infos: ...
@@ -84,7 +84,7 @@ async def test_header_default_python():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_header_none():
+async def test_header_none() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test(
@@ -105,7 +105,7 @@ async def test_header_none():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_header_alias():
+async def test_header_alias() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test(
@@ -128,7 +128,7 @@ async def test_header_alias():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_header_override():
+async def test_header_override() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything", headers={"myheader": "foo"})
         async def test(self, myheader: Annotated[str | None, Header()] = None) -> Infos: ...
@@ -143,7 +143,7 @@ async def test_header_override():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_header_validation():
+async def test_header_validation() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test(self, myheader: Annotated[str, Header(), Field(max_length=3)] = "bar") -> Infos: ...
@@ -156,7 +156,7 @@ async def test_header_validation():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_header_transformer():
+async def test_header_transformer() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test_default(self, myheader: Annotated[datetime, Header()]) -> Infos: ...

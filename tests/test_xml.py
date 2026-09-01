@@ -1,5 +1,5 @@
 from functools import partial
-from typing import Annotated, Optional
+from typing import Annotated
 
 from pydantic_xml import BaseXmlModel, attr, element
 from pytest import mark
@@ -18,7 +18,7 @@ class XmlModelWithResponse(BaseXmlModel, ResponseModel, tag="slideshow"):
 
 
 @mark.asyncio(loop_scope="module")
-async def test_get_xml():
+async def test_get_xml() -> None:
     class HttpBinApi(RapidApi):
         @get("/xml")
         async def test(self) -> XmlModel: ...
@@ -39,7 +39,7 @@ async def test_get_xml():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_post_xml():
+async def test_post_xml() -> None:
     class HttpBinApi(RapidApi):
         @post("/anything", headers={"content-type": "text/plain"})
         async def test(self, xml: Annotated[XmlModel, PydanticXmlBody()]) -> Infos: ...
@@ -51,14 +51,14 @@ async def test_post_xml():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_body_pydanticxml_serializer():
+async def test_body_pydanticxml_serializer() -> None:
     class Data(BaseXmlModel, tag="data"):
-        text_none: Optional[str] = attr("text_null", default=None)
-        text_empty: Optional[str] = attr("text_empty", default="")
-        text_default: Optional[str] = attr("text_default", default="42")
-        sub_empty: Optional[str] = element("sub_empty", default="")
-        sub_none: Optional[str] = element("sub_none", default=None)
-        sub_default: Optional[str] = element("sub_default", default="42")
+        text_none: str | None = attr("text_null", default=None)
+        text_empty: str | None = attr("text_empty", default="")
+        text_default: str | None = attr("text_default", default="42")
+        sub_empty: str | None = element("sub_empty", default="")
+        sub_none: str | None = element("sub_none", default=None)
+        sub_default: str | None = element("sub_default", default="42")
 
     class HttpBinApi(RapidApi):
         @post("/anything", headers={"content-type": "text/plain"})
@@ -136,9 +136,9 @@ async def test_body_pydanticxml_serializer():
 
     api = HttpBinApi(base_url=BASE_URL)
 
-    assert (
-        (await api.test(Data())).data
-        == '<data text_null="" text_empty="" text_default="42"><sub_empty /><sub_none /><sub_default>42</sub_default></data>'
+    assert (await api.test(Data())).data == (
+        '<data text_null="" text_empty="" text_default="42">'
+        "<sub_empty /><sub_none /><sub_default>42</sub_default></data>"
     )
     assert (
         await api.skip_empty(Data())

@@ -6,7 +6,7 @@ are preserved correctly for IDE auto-completion support.
 """
 
 import inspect
-from typing import Annotated, List, get_type_hints
+from typing import Annotated, get_type_hints
 
 from pydantic import BaseModel
 
@@ -33,7 +33,7 @@ class UserApiForTesting(RapidApi):
         ...
 
     @get("/users")
-    def list_users(self, page: Annotated[int, Query()] = 1, limit: Annotated[int, Query()] = 10) -> List[User]:
+    def list_users(self, page: Annotated[int, Query()] = 1, limit: Annotated[int, Query()] = 10) -> list[User]:
         """List users with pagination"""
         ...
 
@@ -43,12 +43,12 @@ class UserApiForTesting(RapidApi):
         ...
 
     @get("/users/search")
-    async def search_users(self, query: Annotated[str, Query()]) -> List[User]:
+    async def search_users(self, query: Annotated[str, Query()]) -> list[User]:
         """Search users asynchronously"""
         ...
 
 
-def test_decorator_preserves_function_signature():
+def test_decorator_preserves_function_signature() -> None:
     """Test that decorators preserve the original function signature."""
     # Test sync method signature
     get_user_sig = inspect.signature(UserApiForTesting.get_user)
@@ -68,16 +68,16 @@ def test_decorator_preserves_function_signature():
     assert search_users_sig.parameters["query"].annotation != inspect.Parameter.empty
 
 
-def test_decorator_preserves_return_annotations():
+def test_decorator_preserves_return_annotations() -> None:
     """Test that decorators preserve return type annotations for IDE support."""
     # Test return annotations are preserved
     assert UserApiForTesting.get_user.__annotations__.get("return") == User
-    assert UserApiForTesting.list_users.__annotations__.get("return") == List[User]
+    assert UserApiForTesting.list_users.__annotations__.get("return") == list[User]
     assert UserApiForTesting.create_user.__annotations__.get("return") == User
-    assert UserApiForTesting.search_users.__annotations__.get("return") == List[User]
+    assert UserApiForTesting.search_users.__annotations__.get("return") == list[User]
 
 
-def test_decorator_preserves_docstrings():
+def test_decorator_preserves_docstrings() -> None:
     """Test that decorators preserve method docstrings."""
     assert UserApiForTesting.get_user.__doc__ == "Get a user by ID"
     assert UserApiForTesting.list_users.__doc__ == "List users with pagination"
@@ -85,7 +85,7 @@ def test_decorator_preserves_docstrings():
     assert UserApiForTesting.search_users.__doc__ == "Search users asynchronously"
 
 
-def test_decorator_preserves_function_name():
+def test_decorator_preserves_function_name() -> None:
     """Test that decorators preserve the original function names."""
     assert UserApiForTesting.get_user.__name__ == "get_user"
     assert UserApiForTesting.list_users.__name__ == "list_users"
@@ -93,7 +93,7 @@ def test_decorator_preserves_function_name():
     assert UserApiForTesting.search_users.__name__ == "search_users"
 
 
-def test_async_method_detection():
+def test_async_method_detection() -> None:
     """Test that async methods are properly detected and handled."""
     # Sync methods should not be coroutine functions
     assert not inspect.iscoroutinefunction(UserApiForTesting.get_user)
@@ -104,20 +104,20 @@ def test_async_method_detection():
     assert inspect.iscoroutinefunction(UserApiForTesting.search_users)
 
 
-def test_type_hints_accessible():
+def test_type_hints_accessible() -> None:
     """Test that type hints are accessible for IDE auto-completion."""
     # Test that get_type_hints works on decorated methods
     get_user_hints = get_type_hints(UserApiForTesting.get_user)
     assert get_user_hints.get("return") == User
 
     list_users_hints = get_type_hints(UserApiForTesting.list_users)
-    assert list_users_hints.get("return") == List[User]
+    assert list_users_hints.get("return") == list[User]
 
     search_users_hints = get_type_hints(UserApiForTesting.search_users)
-    assert search_users_hints.get("return") == List[User]
+    assert search_users_hints.get("return") == list[User]
 
 
-def test_method_callable_with_correct_signature():
+def test_method_callable_with_correct_signature() -> None:
     """Test that decorated methods are callable with the expected signature."""
     # Test the signature inspection directly rather than calling the method
     # since we don't want to make actual HTTP calls in this test
@@ -146,7 +146,7 @@ def test_method_callable_with_correct_signature():
     assert bound_custom.arguments["limit"] == 20
 
 
-def test_parameter_annotations_preserved():
+def test_parameter_annotations_preserved() -> None:
     """Test that parameter annotations are preserved for validation."""
     # Check that annotations include the Path/Query/Body information
     get_user_sig = inspect.signature(UserApiForTesting.get_user)
@@ -165,7 +165,7 @@ def test_parameter_annotations_preserved():
     assert hasattr(limit_annotation, "__origin__")
 
 
-def test_wrapper_function_properties():
+def test_wrapper_function_properties() -> None:
     """Test that wrapper functions maintain expected properties."""
     # Test that the wrapped functions have the correct module
     assert UserApiForTesting.get_user.__module__ == __name__
@@ -176,7 +176,7 @@ def test_wrapper_function_properties():
     assert api.get_user.__self__ is api
 
 
-def test_convenience_decorators_signature_sync():
+def test_convenience_decorators_signature_sync() -> None:
     """Test that convenience decorators have signatures synchronized with http()."""
     from rapid_api_client.decorator import delete, get, http, patch, post, put
 
@@ -195,7 +195,7 @@ def test_convenience_decorators_signature_sync():
         assert len(decorator_sig.parameters) == len(expected_sig.parameters)
 
         for (expected_name, expected_param), (actual_name, actual_param) in zip(
-            expected_sig.parameters.items(), decorator_sig.parameters.items()
+            expected_sig.parameters.items(), decorator_sig.parameters.items(), strict=True
         ):
             assert expected_name == actual_name
             assert expected_param.annotation == actual_param.annotation

@@ -15,11 +15,12 @@ sending the requests, and processing the responses.
 """
 
 import inspect
+from collections.abc import Callable
 from functools import wraps
 from inspect import signature
-from typing import Any, Callable, Dict, Optional, Type, TypeVar, Union
+from typing import Any, TypeVar
 
-from httpx import AsyncClient, Client, Response
+from httpx import AsyncClient, Client, Request, Response
 
 from .client import RapidApi
 from .parameters import ParameterManager
@@ -32,8 +33,8 @@ def http(
     method: str,
     path: str,
     timeout: float | None = None,
-    headers: Dict[str, str] | None = None,
-    raise_for_status: Optional[bool] = None,
+    headers: dict[str, str] | None = None,
+    raise_for_status: bool | None = None,
 ) -> Callable[[F], F]:
     """
     Main decorator used to generate an HTTP request and return its result.
@@ -71,8 +72,11 @@ def http(
         response_class = sig.return_annotation if sig.return_annotation != sig.empty else Response
         is_async = inspect.iscoroutinefunction(func)
 
-        def prepare_request(api: RapidApi, client: Union[Client, AsyncClient], args, kwargs):
-            assert isinstance(api, RapidApi), f"{api} should be an instance of RapidApi"
+        def prepare_request(
+            api: RapidApi, client: Client | AsyncClient, args: tuple[Any, ...], kwargs: dict[str, Any]
+        ) -> Request:
+            if not isinstance(api, RapidApi):
+                raise TypeError(f"{api} should be an instance of RapidApi")
 
             # valuate arguments from args and kwargs
             # use partial binding not to fail on optional arguments with pydantic default values
@@ -83,7 +87,7 @@ def http(
             # resolve the api path
             resolved_path = parameter_manager.get_resolved_path(path, ba)
 
-            build_kwargs: Dict[str, Any] = {
+            build_kwargs: dict[str, Any] = {
                 "headers": parameter_manager.get_headers(ba),
                 "params": parameter_manager.get_query(ba),
             }
@@ -99,14 +103,14 @@ def http(
             return api.build_request(client, method=method, url=resolved_path, **build_kwargs)
 
         @wraps(func)
-        async def async_wrapper(api: RapidApi, *args, **kwargs):
+        async def async_wrapper(api: RapidApi, *args: Any, **kwargs: Any) -> Any:
             async with api.async_client() as async_client:
                 request = prepare_request(api, async_client, args, kwargs)
                 response = await async_client.send(request)
                 return api.process_response(response, response_class, raise_for_status=raise_for_status)
 
         @wraps(func)
-        def wrapper(api: RapidApi, *args, **kwargs):
+        def wrapper(api: RapidApi, *args: Any, **kwargs: Any) -> Any:
             with api.sync_client() as sync_client:
                 request = prepare_request(api, sync_client, args, kwargs)
                 response = sync_client.send(request)
@@ -147,7 +151,7 @@ def rapid_default(**default_kwargs: Any) -> Any:
         >>> custom_api = MyApi(headers={"X-API-Key": "custom-key"})
     """
 
-    def decorator(cls: Type[RapidApi]) -> Type[RapidApi]:
+    def decorator(cls: type[RapidApi]) -> type[RapidApi]:
         # Store the original __init__ method
         original_init = cls.__init__
 
@@ -205,7 +209,7 @@ def _make_method_decorator(method: str) -> Callable[..., Callable[[F], F]]:
     new_sig = http_sig.replace(parameters=list(http_sig.parameters.values())[1:])
 
     # Create the actual decorator function
-    def decorator(*args, **kwargs) -> Callable[[F], F]:
+    def decorator(*args: Any, **kwargs: Any) -> Callable[[F], F]:
         """Dynamically generated HTTP method decorator."""
         return http(method, *args, **kwargs)
 

@@ -1,5 +1,5 @@
 from functools import partial
-from typing import Annotated, Dict, Optional
+from typing import Annotated, Any
 
 from pydantic import BaseModel, Field
 from pytest import mark, raises
@@ -20,7 +20,7 @@ from .conftest import BASE_URL, Infos
 
 
 @mark.asyncio(loop_scope="module")
-async def test_body_str():
+async def test_body_str() -> None:
     class HttpBinApi(RapidApi):
         @post("/anything")
         async def test(
@@ -36,12 +36,12 @@ async def test_body_str():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_body_json():
+async def test_body_json() -> None:
     class HttpBinApi(RapidApi):
         @post("/anything")
         async def test(
             self,
-            body: Annotated[Dict, JsonBody()],
+            body: Annotated[dict[str, Any], JsonBody()],
             content_type: Annotated[str, Header(alias="content-type")] = "application/json",
         ) -> Infos: ...
 
@@ -54,7 +54,7 @@ async def test_body_json():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_body_form():
+async def test_body_form() -> None:
     class User(BaseModel):
         name: str
         age: int
@@ -63,7 +63,7 @@ async def test_body_form():
         @post("/anything")
         async def test(
             self,
-            body: Annotated[Dict, FormBody()],
+            body: Annotated[dict[str, Any], FormBody()],
             extra: Annotated[str, FormBody(alias="extra_param")],
             default: Annotated[str, FormBody()] = "hello",
         ) -> Infos: ...
@@ -80,7 +80,7 @@ async def test_body_form():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_body_pydantic():
+async def test_body_pydantic() -> None:
     class User(BaseModel):
         foo: str = Field(alias="firstname")
         bar: str = Field(alias="lastname")
@@ -99,7 +99,7 @@ async def test_body_pydantic():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_body_files():
+async def test_body_files() -> None:
     class HttpBinApi(RapidApi):
         @post("/anything")
         async def test(
@@ -117,7 +117,7 @@ async def test_body_files():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_body_mixed():
+async def test_body_mixed() -> None:
     with raises(InvalidBodyError):
 
         class HttpBinApi1(RapidApi):
@@ -140,11 +140,11 @@ async def test_body_mixed():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_body_pydantic_transformer():
+async def test_body_pydantic_transformer() -> None:
     class Data(BaseModel):
-        text_none: Optional[str] = None
-        text_empty: Optional[str] = ""
-        text_default: Optional[str] = "42"
+        text_none: str | None = None
+        text_empty: str | None = ""
+        text_default: str | None = "42"
 
     class HttpBinApi(RapidApi):
         @post("/anything", headers={"content-type": "application/json"})

@@ -10,10 +10,10 @@ from .conftest import BASE_URL, Infos
 
 
 @mark.asyncio(loop_scope="module")
-async def test_response_raw():
+async def test_response_raw() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything")
-        async def test(self): ...
+        async def test(self) -> Response: ...
 
     api = HttpBinApi(base_url=BASE_URL)
 
@@ -23,7 +23,7 @@ async def test_response_raw():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_response_model():
+async def test_response_model() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test(self) -> Infos: ...
@@ -37,7 +37,7 @@ async def test_response_model():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_response_str():
+async def test_response_str() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test(self) -> str: ...
@@ -50,7 +50,7 @@ async def test_response_str():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_response_bytes():
+async def test_response_bytes() -> None:
     class HttpBinApi(RapidApi):
         @get("/anything")
         async def test(self) -> bytes: ...
@@ -62,7 +62,7 @@ async def test_response_bytes():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_response_dataclass():
+async def test_response_dataclass() -> None:
     @dataclass
     class Infos2:
         url: str
@@ -81,10 +81,10 @@ async def test_response_dataclass():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_response_error():
+async def test_response_error() -> None:
     class HttpBinApi(RapidApi):
         @get("/status/500")
-        async def test(self): ...
+        async def test(self) -> Response: ...
 
     api = HttpBinApi(base_url=BASE_URL)
 
@@ -94,7 +94,7 @@ async def test_response_error():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_response_error_raise():
+async def test_response_error_raise() -> None:
     class HttpBinApi(RapidApi):
         @get("/status/500")
         async def raw(self) -> Response: ...
@@ -136,7 +136,7 @@ async def test_response_error_raise():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_response_rapidresponse():
+async def test_response_rapidresponse() -> None:
     class MyModel(BaseModel):
         url: str
         method: str

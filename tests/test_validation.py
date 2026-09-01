@@ -20,7 +20,7 @@ class MyApi(RapidApi):
 
 
 @mark.asyncio(loop_scope="module")
-async def test_validation_path():
+async def test_validation_path() -> None:
     api = MyApi(base_url=BASE_URL)
 
     await api.test_path(1)
@@ -30,7 +30,7 @@ async def test_validation_path():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_validation_header():
+async def test_validation_header() -> None:
     api = MyApi(base_url=BASE_URL)
 
     await api.test_header(1)
@@ -40,7 +40,7 @@ async def test_validation_header():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_validation_query():
+async def test_validation_query() -> None:
     api = MyApi(base_url=BASE_URL)
 
     await api.test_query(1)

@@ -12,19 +12,10 @@ They work together with the decorator module to provide a declarative way
 to define API clients.
 """
 
+from collections.abc import AsyncGenerator, Callable, Generator
 from contextlib import asynccontextmanager, contextmanager
 from inspect import isclass
-from typing import (
-    Any,
-    AsyncGenerator,
-    Callable,
-    Dict,
-    Generator,
-    Optional,
-    Type,
-    Union,
-    cast,
-)
+from typing import Any, cast
 
 from httpx import AsyncClient, Client, Request, Response
 from pydantic import BaseModel, TypeAdapter
@@ -57,20 +48,20 @@ class RapidApi:
     """
 
     __slots__ = (
-        "_client",
-        "_client_factory",
         "_async_client",
         "_async_client_factory",
+        "_client",
+        "_client_factory",
         "_factory_args",
     )
 
     def __init__(
         self,
         *,
-        client: Optional[Client] = None,
-        client_factory: Optional[Callable[..., Client]] | None = None,
-        async_client: Optional[AsyncClient] = None,
-        async_client_factory: Optional[Callable[..., AsyncClient]] = None,
+        client: Client | None = None,
+        client_factory: Callable[..., Client] | None | None = None,
+        async_client: AsyncClient | None = None,
+        async_client_factory: Callable[..., AsyncClient] | None = None,
         **kwargs: Any,
     ) -> None:
         """
@@ -93,7 +84,7 @@ class RapidApi:
         self._client_factory = client_factory
         self._async_client = async_client
         self._async_client_factory = async_client_factory
-        self._factory_args: Dict[str, Any] = kwargs
+        self._factory_args: dict[str, Any] = kwargs
 
     @contextmanager
     def sync_client(self) -> Generator[Client, None, None]:
@@ -135,7 +126,7 @@ class RapidApi:
             async with factory(**self._factory_args) as client:
                 yield client
 
-    def build_request(self, client: Union[Client, AsyncClient], *, method: str, url: str, **kwargs) -> Request:
+    def build_request(self, client: Client | AsyncClient, *, method: str, url: str, **kwargs: Any) -> Request:
         """
         Build an HTTP request using the provided client.
 
@@ -163,8 +154,8 @@ class RapidApi:
     def process_response(
         self,
         response: Response,
-        response_class: Type[T],
-        raise_for_status: Optional[bool] = None,
+        response_class: type[T],
+        raise_for_status: bool | None = None,
     ) -> T:
         """
         Process an HTTP response and convert it to the specified type.
@@ -229,4 +220,4 @@ class RapidApi:
         # Check if the response class is a subclass of ResponseModel to set the response private attribute
         if isinstance(out, ResponseModel):
             out._response = response
-        return cast(T, out)
+        return out

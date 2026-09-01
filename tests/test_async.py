@@ -14,21 +14,21 @@ class HttpBinApi(RapidApi):
 
 
 @mark.asyncio(loop_scope="module")
-async def test_client():
+async def test_client() -> None:
     api = HttpBinApi(async_client=AsyncClient(base_url=BASE_URL))
     infos = await api.get()
     assert infos.method == "GET"
 
 
 @mark.asyncio(loop_scope="module")
-async def test_default_client():
+async def test_default_client() -> None:
     api = HttpBinApi(base_url=BASE_URL)
     infos = await api.get()
     assert infos.method == "GET"
 
 
 @mark.asyncio(loop_scope="module")
-async def test_taskgroup():
+async def test_taskgroup() -> None:
     api = HttpBinApi(base_url=BASE_URL)
 
     async with asyncio.TaskGroup() as tg:
@@ -41,7 +41,7 @@ async def test_taskgroup():
 
 
 @mark.asyncio(loop_scope="module")
-async def test_gather():
+async def test_gather() -> None:
     api = HttpBinApi(base_url=BASE_URL)
 
     asyncio.gather()

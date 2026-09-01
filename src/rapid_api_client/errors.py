@@ -6,12 +6,11 @@ scenarios. All custom exceptions inherit from the base RapidError class.
 """
 
 
-class RapidError(BaseException):
+class RapidError(Exception):
     """Base exception class for all rapid-api-client specific errors.
 
     This is the parent class for all custom exceptions in the rapid-api-client
-    library. It inherits from BaseException to distinguish library-specific
-    errors from standard Python exceptions.
+    library.
 
     All other custom exceptions in this library should inherit from this class
     to provide a consistent exception hierarchy and enable catching all

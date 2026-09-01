@@ -25,9 +25,10 @@ This dual annotation system provides better separation of concerns and full
 compatibility with Pydantic v2's validation system.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import partial
-from typing import Any, Callable, Literal, Optional
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -59,8 +60,8 @@ class RapidAnnotation:
                     Should accept Any and return Any.
     """
 
-    alias: Optional[str] = field(default=None)
-    transformer: Optional[Callable[[Any], Any]] = field(default=None)
+    alias: str | None = field(default=None)
+    transformer: Callable[[Any], Any] | None = field(default=None)
 
 
 @dataclass(slots=True)
@@ -106,7 +107,7 @@ class Path(RapidAnnotation):
         >>> events = api.get_events(datetime.now())  # Uses ISO format for date
     """
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.transformer is None:
             self.transformer = str
 
@@ -162,7 +163,7 @@ class Query(RapidAnnotation):
         >>> events = api.get_events(datetime.now())  # Uses ISO format for date parameter
     """
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.transformer is None:
             self.transformer = str
 
@@ -203,14 +204,16 @@ class Header(RapidAnnotation):
         ...
         ...     # With custom transformer
         ...     @get("/timestamp")
-        ...     def get_with_timestamp(self, timestamp: Annotated[datetime, Header(transformer=lambda x: x.isoformat())]): ...
+        ...     def get_with_timestamp(
+        ...         self, timestamp: Annotated[datetime, Header(transformer=lambda x: x.isoformat())]
+        ...     ): ...
         >>>
         >>> api = MyApi(base_url="https://api.example.com")
         >>> data = api.get_protected("Bearer token123")  # Adds "Authorization: Bearer token123" header
         >>> data = api.get_with_timestamp(datetime.now())  # Uses ISO format for timestamp header
     """
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.transformer is None:
             self.transformer = str
 
@@ -259,7 +262,7 @@ class JsonBody(Body):
         >>> # Sends {"name": "John", "email": "john@example.com"} as JSON
     """
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.keyword = "json"
 
 
@@ -297,7 +300,7 @@ class FormBody(Body):
         >>> api.update({"field1": "value1", "field2": "value2"})  # Sends field1=value1&field2=value2
     """
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.keyword = "data"
 
 
@@ -322,7 +325,7 @@ class FileBody(Body):
         ...     response = api.upload_file(f)  # Uploads document.pdf as multipart/form-data
     """
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.keyword = "files"
 
 
@@ -366,7 +369,7 @@ class PydanticBody(Body):
         >>> response = api.create_user_custom(new_user)  # Uses custom serialization options
     """
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.transformer is None:
             self.transformer = partial(BaseModel.model_dump_json, by_alias=True, exclude_none=True)
 
@@ -411,6 +414,6 @@ class PydanticXmlBody(Body):
         >>> response = api.create_user_custom(new_user)  # Uses custom serialization options
     """
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.transformer is None:
             self.transformer = pydantic_xml_transformer
